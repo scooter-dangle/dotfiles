@@ -20,6 +20,8 @@ alias  l='ls -CF'
 alias gm='w3m "https://mail.google.com/mail/you/0/?ui=html&zy=s"'
 alias th='~/Downloads/Thunderbird/thunderbird &'
 
+alias co='setxkbmap -option "compose:menu" && xmodmap ~/.Xmodmap'
+
 function blerg { echo blerg $1 ferg snerg; }
 
 # git
