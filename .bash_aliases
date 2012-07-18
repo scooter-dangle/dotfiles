@@ -27,7 +27,9 @@ function blerg { echo blerg $1 ferg snerg; }
 # git
 alias gs='git status -s'
 alias gd='git diff -b --color'
+alias gb='git branch'
 function gc { git commit -am $1; }
+function gco { git co $1; }
 
 # pman auto-completion
 alias pm='source ~/.pman.sh'
