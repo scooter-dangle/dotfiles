@@ -115,7 +115,7 @@ fi
 set -o vi
 
 # Less Colors for Man Pages - first group is for low-color terminals
-if [ -f ~/.LOW-COLOR-TERM or ~/dotfiles/.LOW-COLOR-TERM ]; then
+if [ -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM ]; then
     export LESS_TERMCAP_mb=$'\E[01;31m'       # begin blinking
     export LESS_TERMCAP_md=$'\E[01;31m'       # begin bold
     export LESS_TERMCAP_me=$'\E[0m'           # end mode
