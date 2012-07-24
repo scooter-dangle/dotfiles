@@ -7,6 +7,7 @@ function ag { grep $1 ~/.bash_aliases; }
 
 
 alias  up='cd ..'
+alias  bk='cd -'
 alias  bx='bundle exec'
 alias   d=date
 alias rbc='cd ~/.rvm/src/ruby-1.9.3-p0'
@@ -30,6 +31,8 @@ function blerg { echo blerg $1 ferg snerg; }
 alias gs='git status -s'
 alias gd='git diff -b --color'
 alias gb='git branch'
+alias gp='git pull'
+alias GP='git push'
 function gc { git commit -am $1; }
 function gco { git co $1; }
 
