@@ -128,3 +128,10 @@ export LESS_TERMCAP_se=$'\E[0m'           # end standout-mode
 export LESS_TERMCAP_so=$'\E[38;5;246m'    # begin standout-mode - info box
 export LESS_TERMCAP_ue=$'\E[0m'           # end underline
 export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
+
+
+# from ngauthier.com
+alias bundle-bootstrap="bundle install --binstubs=.bundle/bin path=.bundle/gems"
+export GEM_HOME=$HOME/.gems
+export PATH=.bundle/bin:$GEM_HOME/bin:$PATH
+
