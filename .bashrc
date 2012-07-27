@@ -100,14 +100,18 @@ export PATH=/home/ubuntu/.vim/Vim-toCterm:$PATH
 export PATH=/usr/racket/bin:$PATH
 export NODE_PATH=/usr/local/lib/node:/usr/local/lib/node_modules:/usr/lib/node:/usr/lib/node_modules
 
-[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
-PS1="\$(~/.rvm/bin/rvm-prompt u) $PS1" # To display to current ruby selection string in my prompt
+if [ -d ~/.rvm ]; then
+    [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
+    PS1="\$(~/.rvm/bin/rvm-prompt u) $PS1" # To display to current ruby selection string in my prompt
+fi
 
 # rvm auto-completion
 [[ -r $rvm_path/scripts/completion ]] && . $rvm_path/scripts/completion
 
 # git auto-completion
-source ~/.git-completion.sh
+if [ -f ~/.git-completion.sh ]; then
+    source ~/.git-completion.sh
+fi
 
 # Allow vi-like commands and editing
 set -o vi
