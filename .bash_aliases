@@ -27,6 +27,9 @@ alias co='setxkbmap -option "compose:menu" && xmodmap ~/.Xmodmap'
 
 function blerg { echo blerg $1 ferg snerg; }
 
+# Specific to Jeevsy
+function cn { sudo chown ubuntu:ubuntu $1; }
+
 # git
 alias gs='git status -s'
 alias gd='git diff -b --color'
