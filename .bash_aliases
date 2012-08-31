@@ -32,7 +32,6 @@ function blerg { echo blerg $1 ferg snerg; }
 
 # Specific to Jeevsy
 function cn { sudo chown ubuntu:ubuntu $1; }
-alias sa='ssh-agent bash && ssh-add'
 
 # git
 alias gs='git status -s'
