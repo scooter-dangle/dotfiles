@@ -20,9 +20,6 @@ alias  l='ls -CF'
 function ld { cd $1 && ls; }
 alias lu='cd .. && ls'
 
-alias ruby='ruby1.9.3'
-alias  irb='irb1.9.3'
-
 alias gm='w3m "https://mail.google.com/mail/you/0/?ui=html&zy=s"'
 alias th='~/Downloads/Thunderbird/thunderbird &'
 
