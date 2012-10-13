@@ -38,3 +38,24 @@ Wirble.init
 Wirble.colorize
 print RUBY_VERSION, "\n"
 
+
+
+class Object
+    alias_method :m, :method
+end
+
+
+def russian_roulette
+    -> do
+        reset = -> { Array.new(5, nil.to_s).push('exit').shuffle }
+        barrel = reset[]
+        -> do
+            if barrel.size == 1 then
+                barrel = reset[]
+            else
+                eval barrel.pop
+            end
+            barrel.shuffle!.dup
+        end
+    end[]
+end
