@@ -36,6 +36,7 @@ function cn { sudo chown ubuntu:ubuntu $1; }
 # git
 alias gs='git status -s'
 alias gd='git diff -b --color'
+alias gl='git log'
 alias gb='git branch'
 alias gp='git pull'
 alias GP='git push'
@@ -44,6 +45,17 @@ function gco { git co $1; }
 
 # pman auto-completion
 alias pm='source ~/.pman.sh'
+
+# test 256 colors (from commandlinefu.com)
+function tt256 {(
+    x = `tput op` y=`printf %$((${COLUMN}-6))s`;
+    for i in {0..256};
+    do
+        o=00$i;
+        echo -e ${o:${#o}-3:3} `tput setaf $i;tput setab $i`${y// /=}$x;
+    done
+)}
+
 
 # I use asky to check whether the current terminal is rendering all the
 # ascii glyphs correctly.

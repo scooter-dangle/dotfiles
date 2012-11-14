@@ -98,6 +98,7 @@ fi
 export PATH=/var/lib/gems/1.8/bin:$PATH
 export PATH=/home/ubuntu/.vim/Vim-toCterm:$PATH
 export PATH=/usr/racket/bin:$PATH
+export PATH=~/.cabal/bin:$PATH
 export NODE_PATH=/usr/local/lib/node:/usr/local/lib/node_modules:/usr/lib/node:/usr/lib/node_modules
 
 if [ -d ~/.rvm ]; then
