@@ -40,12 +40,12 @@ force_color_prompt=yes
 
 if [ -n "$force_color_prompt" ]; then
     if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
-	# We have color support; assume it's compliant with Ecma-48
-	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-	# a case would tend to support setf rather than setaf.)
-	color_prompt=yes
+        # We have color support; assume it's compliant with Ecma-48
+        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+        # a case would tend to support setf rather than setaf.)
+        color_prompt=yes
     else
-	color_prompt=
+        color_prompt=
     fi
 fi
 
@@ -100,6 +100,13 @@ export PATH=/home/ubuntu/.vim/Vim-toCterm:$PATH
 export PATH=/usr/racket/bin:$PATH
 export PATH=~/.cabal/bin:$PATH
 export NODE_PATH=/usr/local/lib/node:/usr/local/lib/node_modules:/usr/lib/node:/usr/lib/node_modules
+export PATH="$HOME/.rbenv/bin:$PATH"
+export PATH=~/erlang/rebar:$PATH
+
+# from ngauthier.com
+alias bundle-bootstrap="bundle install --binstubs=.bundle/bin path=.bundle/gems"
+export GEM_HOME=$HOME/.gems
+export PATH=.bundle/bin:$GEM_HOME/bin:$PATH
 
 if [ -d ~/.rvm ]; then
     [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
@@ -116,11 +123,6 @@ fi
 
 # Allow vi-like commands and editing
 set -o vi
-
-# from ngauthier.com
-alias bundle-bootstrap="bundle install --binstubs=.bundle/bin path=.bundle/gems"
-export GEM_HOME=$HOME/.gems
-export PATH=.bundle/bin:$GEM_HOME/bin:$PATH
 
 if [ -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM ]; then
     export LESS_TERMCAP_mb=$'\E[01;31m'       # begin blinking
@@ -139,5 +141,4 @@ else
     export LESS_TERMCAP_ue=$'\E[0m'           # end underline
     export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
 fi
-export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"

@@ -14,6 +14,8 @@ alias rbc='cd ~/.rvm/src/ruby-1.9.3-p0'
 alias  ct='ctags -R'
 alias  pi='ping www.google.com'
 
+function dl { rm -i $1; }
+
 alias ll='ls -alF'
 alias la='ls -A'
 alias  l='ls -CF'
@@ -22,6 +24,7 @@ alias lu='cd .. && ls'
 
 alias ruby='ruby1.9.3'
 alias  irb='irb1.9.3'
+alias rakes='rake -T'
 
 alias gm='w3m "https://mail.google.com/mail/you/0/?ui=html&zy=s"'
 alias th='~/Downloads/Thunderbird/thunderbird &'
@@ -48,14 +51,72 @@ alias pm='source ~/.pman.sh'
 
 # test 256 colors (from commandlinefu.com)
 function tt256 {(
-    x = `tput op` y=`printf %$((${COLUMN}-6))s`;
-    for i in {0..256};
+    function tt256_helper { m=`tput cols` n=`printf %$(($m-4))s`; echo ${n// /=}; }
+    h=${1:-1} x=`tput op`;
+    for (( g = 0; g < $h; g++ ));
     do
-        o=00$i;
-        echo -e ${o:${#o}-3:3} `tput setaf $i;tput setab $i`${y// /=}$x;
-    done
+        for i in {0..256};
+        do
+            y=`tt256_helper`;
+            o=00$i;
+            echo -e ${o:${#o}-3:3} `tput setaf $i;tput setab $i`$y$x;
+        done;
+    done;
 )}
 
+# faster version of previous function
+function tt256f {(
+    function tt256_helper { m=`tput cols` n=`printf %$(($m-4))s`; echo ${n// /=}; }
+    h=${1:-1};
+    x=`tput op`;
+    y=`tt256_helper`;
+    for (( g = 0; g < $h; g++ ));
+    do
+        for i in {0..256};
+        do
+            o=00$i;
+            echo -e ${o:${#o}-3:3} `tput setaf $i;tput setab $i`$y$x;
+        done;
+    done;
+)}
+
+# screensaver version of previous function
+function tt256s {(
+    function reseter {(
+        if [[ $(($1 + 2)) -gt `tput lines` ]]
+        then
+            clear;
+            return $((0));
+        else
+            echo $1;
+        fi;
+    )}
+    function tt256_helper { m=`tput cols` n=`printf %${m}s`; echo ${n// /=}; }
+    x=`tput op`;
+    l=0;
+    sleepy_time="0.0$((45 + ($RANDOM % 45)))";
+    clear;
+    lister=(1 6 36);
+    stepper=${lister[$(($RANDOM % 3))]};
+    modder=$((231-17));
+    while true;
+    do
+        for h in {1..214};
+        do
+            sleep $sleepy_time;
+            if [[ $(($l + 3)) -gt `tput lines` ]]
+            then
+                clear;
+                l=0;
+            else
+                l=$(($l + 1));
+            fi;
+            i=$((17 + ((h * stepper) % $modder)));
+            y=`tt256_helper`;
+            echo -e `tput setaf $i;tput setab $i`$y$x;
+        done;
+    done;
+)}
 
 # I use asky to check whether the current terminal is rendering all the
 # ascii glyphs correctly.
@@ -68,3 +129,5 @@ function le { ls -al $1 | less; }
 function md { mkdir $1 && cd $1; }
 
 function foo { bash ~/bash/push_live.sh $1; }
+
+# vim: set filetype=sh:
