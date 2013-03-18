@@ -8,11 +8,16 @@ function ag { grep $1 ~/.bash_aliases; }
 
 alias  up='cd ..'
 alias  bk='cd -'
+alias  hm='cd ~'
 alias  bx='bundle exec'
 alias   d=date
-alias rbc='cd ~/.rvm/src/ruby-1.9.3-p0'
 alias  ct='ctags -R'
 alias  pi='ping www.google.com'
+alias rsh='pry --require rake'
+# Be super careful with this little feller...
+# Don't use him twice in a row or he will
+# buh-rake all of your things :(
+alias  mo='fc -s | more'
 
 function dl { rm -i $1; }
 
