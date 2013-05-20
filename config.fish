@@ -13,6 +13,9 @@ set -x PATH $HOME/.rbenv/bin $PATH
 set -x GEM_HOME $HOME/.gems
 set -x PATH .bundle/bin $GEM_HOME/bin $PATH
 
+# tmux looks at $EDITOR to determine whether to use vi keys
+set -x EDITOR vi
+
 function bundle-bootstrap
     bundle install --binstubs=.bundle/bin path=.bundle/gems
 end
