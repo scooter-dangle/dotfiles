@@ -21,3 +21,11 @@ function s;  grep $argv[1] -Rn . | less; end
 function md;  mkdir $argv[1]; and cd $argv[1]; end
 
 function blerg; echo blerg $argv[1] ferg snerg; end
+
+function tmux_launch
+    if test (tmux ls)
+        tmux -2 attach
+    else
+        tmux -2
+    end
+end
