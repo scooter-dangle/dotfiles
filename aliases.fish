@@ -45,6 +45,8 @@ function md;  mkdir $argv[1]; and cd $argv[1]; end
 
 function rspecall; rspec $argv; and rspec1.8 $argv; and rspec2.0; and jrspec1.9 $argv; and jrspec1.8 $argv; and rbx -X1.9 (which rspec) $argv;  and rbx -X1.8 (which rspec) $argv; end
 function mruby; ~/ruby/mruby/bin/mruby $argv; end
+function mirb; ~/ruby/mruby/bin/mirb $argv; end
+function mrbc; ~/ruby/mruby/bin/mrbc $argv; end
 function rbx; ~/.rbx/usr/bin/rbx $argv; end
 function rspec1.8; ruby1.8 (which rspec) $argv; end
 function rspec2.0; ruby2.0 (which rspec) $argv; end
