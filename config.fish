@@ -10,10 +10,12 @@ set -x PATH ~/erlang/rebar $PATH
 set -x PATH ~/.cabal/bin $PATH
 set -x PATH ~/node_modules/.bin $PATH
 set -x PATH $HOME/.rbenv/bin $PATH
+set -x PATH $HOME/.rbenv/shims $PATH
 
 set -x GEM_HOME $HOME/.gems
 set -x PATH .bundle/bin $GEM_HOME/bin $PATH
 
+rbenv init - | bash
 
 # Can't get this to work
 #if test -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM
