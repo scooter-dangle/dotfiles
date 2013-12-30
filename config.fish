@@ -11,6 +11,8 @@ set -x PATH ~/.cabal/bin $PATH
 set -x PATH ~/node_modules/.bin $PATH
 set -x PATH $HOME/.rbenv/bin $PATH
 set -x PATH $HOME/.rbenv/shims $PATH
+set -x PATH $HOME/ruby/mruby/bin $PATH
+set -x PATH $HOME/.topaz/bin $PATH
 
 set -x GEM_HOME $HOME/.gems
 set -x PATH .bundle/bin $GEM_HOME/bin $PATH

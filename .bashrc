@@ -141,3 +141,5 @@ else
     export LESS_TERMCAP_us=$'\E[04;38;5;146m' # begin underline
 fi
 eval "$(rbenv init -)"
+PATH=$PATH:$HOME/bin
+MANPATH=$MANPATH:$HOME/share/man

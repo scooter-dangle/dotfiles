@@ -1,0 +1,6 @@
+[user]
+	name = scooter-dangle
+	email = scottlsteele@gmail.com
+[alias]
+        ci = commit
+        co = checkout
