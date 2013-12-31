@@ -143,3 +143,5 @@ fi
 eval "$(rbenv init -)"
 PATH=$PATH:$HOME/bin
 MANPATH=$MANPATH:$HOME/share/man
+
+PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
