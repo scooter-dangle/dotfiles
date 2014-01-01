@@ -63,6 +63,8 @@ function jrspec1.8; jruby --1.8 (which rspec) $argv; end
 function jrspec1.9; jruby --1.9 (which rspec) $argv; end
 function topaz; ~/.topaz/bin/topaz $argv; end
 
+function bundle-bootstrap; bundle install --shebang (which ruby2.1) --binstubs=.bundle/bin --path .bundle/gems; end
+
 function parallel -d "Provide POSIX shell to Gnu parallel"; set -lx SHELL bash; command parallel $argv; end
 
 function img -d "Fake Erlang image parser"; cd ~/erlang/img; escript img_parse.escript $argv; bk; end
