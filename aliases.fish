@@ -63,11 +63,13 @@ function jrspec1.8; jruby --1.8 (which rspec) $argv; end
 function jrspec1.9; jruby --1.9 (which rspec) $argv; end
 function topaz; ~/.topaz/bin/topaz $argv; end
 
-function bundle-bootstrap; bundle install --shebang (which ruby2.1) --binstubs=.bundle/bin --path .bundle/gems; end
+function bundle-bootstrap; bundle install --shebang (which ruby) --binstubs=.bundle/bin --path .bundle/gems; end
 
 function parallel -d "Provide POSIX shell to Gnu parallel"; set -lx SHELL bash; command parallel $argv; end
 
-function img -d "Fake Erlang image parser"; cd ~/erlang/img; escript img_parse.escript $argv; bk; end
+function podders -d "Run Hpodder with necessary intermediate shell steps"; cd ~/.hpodder; hpodder update; ruby update_auth.rb; hpodder download; end
+
+function img -d "Fake Erlang image parser"; set current_dir (pwd); bk; set prev_dir (pwd); cd ~/erlang/voroni; ./img.escript $argv; cd $prev_dir; cd $current_dir; end
 
 function f -d "Find files with the given argument in their name in the current directory or its subdirectories"; find . $argv[1] 2> /dev/null | grep -i $argv[1]"[^/]*\$"; end
 
@@ -75,6 +77,6 @@ function blerg; echo blerg $argv[1] ferg snerg; end
 
 function lsusers -d "List all users"; cat /etc/passwd; end
 
-function tmux_launch; if test (tmux ls); tmux -2 attach; else; tmux -2; end; end
+function tm; if test (tmux ls); tmux -2 attach; else; tmux -2; end; end
 
 function xcape -d "Run xcape keymappings"; ~/xcape/xcape -e 'Alt_L=Control_L|S'; ~/xcape/xcape -e 'Control_L=Escape'; end
