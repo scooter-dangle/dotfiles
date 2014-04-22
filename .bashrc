@@ -100,6 +100,7 @@ export PATH=/usr/racket/bin:$PATH
 export PATH=~/.cabal/bin:$PATH
 export NODE_PATH=/usr/local/lib/node:/usr/local/lib/node_modules:/usr/lib/node:/usr/lib/node_modules
 export PATH="$HOME/.rbenv/bin:$PATH"
+export PATH="$HOME/.rbenv/shims:$PATH"
 export PATH=~/erlang/rebar:$PATH
 
 # from ngauthier.com

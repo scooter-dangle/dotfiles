@@ -23,6 +23,8 @@ function up; cd ..; end
 function bk; cd - ; end
 function hm; cd ~ ; end
 
+function la; ls --almost-all --human-readable -l --group-directories-first --classify $argv; end
+
 function bx; bundle exec $argv; end
 function rsh; pry --require rake; end
 
@@ -49,7 +51,9 @@ function pp; pygmentize $argv; end
 function s -d "Find the given argument in any file within the current directory or its subdirectories";  grep $argv -RIin .; or echo $argv[1] not found; end
 function l -d "Grab a particular line from file or pipe"; paj 1 $argv[1]; end
 function paj -d "Paginate result chunk"; set increment $argv[1]; set chunk $argv[2]; set startIndex (math "("$chunk" + 1) *"$increment); head -n $startIndex | tail -n $increment; end
-function md;  mkdir $argv[1]; and cd $argv[1]; end
+function md;  mkdir --parents $argv[1]; and cd $argv[1]; end
+
+function psfind --description "Search for processes with a given string"; ps aux | grep $argv[1] | grep grep --invert-match; end
 
 function composer -d "php package manager"; php ~/emoxie/composer.phar $argv; end
 function phpdoc_gen -d "Run phpdoc in current directory"; phpdoc -d . -t docs; end
@@ -74,7 +78,7 @@ function bundle-bootstrap; bundle install --shebang (which ruby) --binstubs=.bun
 
 function parallel -d "Provide POSIX shell to Gnu parallel"; set -lx SHELL bash; command parallel $argv; end
 
-function podders -d "Run Hpodder with necessary intermediate shell steps"; cd ~/.hpodder; hpodder update; ruby update_auth.rb; hpodder download; end
+function podders -d "Run Hpodder with necessary intermediate shell steps"; set current_dir (pwd); hpodder update; cd ~/.hpodder; ruby update_auth.rb; cd $current_dir; hpodder download; end
 
 function mmc -d "Mercury Compiler, version 14.01"; ~/.mercury/scripts/mmc $argv; end
 
@@ -88,4 +92,4 @@ function lsusers -d "List all users"; cat /etc/passwd; end
 
 function tm; if test (tmux ls); tmux -2 attach; else; tmux -2; end; end
 
-function xcape -d "Run xcape keymappings"; ~/xcape/xcape -e 'Alt_L=Control_L|S'; ~/xcape/xcape -e 'Control_L=Escape'; end
+function xcape -d "Run xcape keymappings"; ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'; ~/apps/xcape/xcape -e 'Control_L=Escape'; end

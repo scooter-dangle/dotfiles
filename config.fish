@@ -1,8 +1,6 @@
 # vim: filetype=sh
 
-if status --is-interactive
-    . ~/.config/fish/aliases.fish
-end
+status --is-interactive; and . ~/.config/fish/aliases.fish
 
 set -x NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
@@ -17,7 +15,28 @@ set -x PATH $HOME/.topaz/bin $PATH
 set -x GEM_HOME $HOME/.gems
 set -x PATH .bundle/bin $GEM_HOME/bin $PATH
 
-rbenv init - | bash
+set -x GOPATH $HOME/go
+set -x GOBIN $HOME/go/bin
+set -x PATH /usr/local/go/bin $PATH
+
+set -x PATH $GOBIN $PATH
+
+function install_rbenv
+  if test ! -d ~/.rbenv
+      set orig_dir (pwd)
+      cd ~
+      git clone https://github.com/sstephenson/rbenv.git
+      mv rbenv .rbenv
+      cd rbenv
+      mkdir plugins
+      cd plugins
+      git clone https://github.com/sstephenson/ruby-build.git
+      cd $orig_dir
+      # Still need to do more things here
+  else
+      echo ~/.rbenv already exists!
+  end
+end
 
 # Can't get this to work
 #if test -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM
@@ -95,3 +114,9 @@ function fish_prompt --description 'Write out the prompt'
   echo -n '> '
 
 end
+
+# Load rbenv automatically by adding
+# the following to ~/.config/fish/config.fish:
+
+status --is-interactive; and . (rbenv init -|psub)
+
