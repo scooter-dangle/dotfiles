@@ -82,6 +82,9 @@ function parallel --description "Provide POSIX shell to Gnu parallel"; set -lx S
 
 function podders --description "Run Hpodder with necessary intermediate shell steps"; set current_dir (pwd); hpodder update; cd ~/.hpodder; ruby update_auth.rb; cd $current_dir; hpodder download; end
 
+# easy fix
+function uname --description "If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article"; command uname $argv | sed 's/GNU\/Linux/Linux/g'; end
+
 function mmc --description "Mercury Compiler, version 14.01"; ~/.mercury/scripts/mmc $argv; end
 
 function img --description "Fake Erlang image parser"; set current_dir (pwd); bk; set prev_dir (pwd); cd ~/erlang/voroni; ./img.escript $argv; cd $prev_dir; cd $current_dir; end
