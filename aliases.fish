@@ -23,6 +23,8 @@ function up; cd ..; end
 function bk; cd - ; end
 function hm; cd ~ ; end
 
+function qcount --description "Quiet count. Use exit status without printing"; count $argv > /dev/null; end
+
 function la; ls --almost-all --human-readable -l --group-directories-first --classify $argv; end
 
 function bx; bundle exec $argv; end
