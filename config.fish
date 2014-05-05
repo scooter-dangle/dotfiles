@@ -1,5 +1,3 @@
-# vim: filetype=sh
-
 status --is-interactive; and . ~/.config/fish/aliases.fish
 
 set -x NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules

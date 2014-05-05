@@ -1,5 +1,3 @@
-# vim: filetype=sh
-
 # Tip from M Subelsky:
 set -u aliases ~/.config/fish/aliases.fish
 function ea; vim $aliases; and . $aliases; end
