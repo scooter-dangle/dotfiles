@@ -1,8 +1,4 @@
-# vim: filetype=sh
-
-if status --is-interactive
-    . ~/.config/fish/aliases.fish
-end
+status --is-interactive; and . ~/.config/fish/aliases.fish
 
 set -x NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
@@ -17,7 +13,28 @@ set -x PATH $HOME/.topaz/bin $PATH
 set -x GEM_HOME $HOME/.gems
 set -x PATH .bundle/bin $GEM_HOME/bin $PATH
 
-rbenv init - | bash
+set -x GOPATH $HOME/go
+set -x GOBIN $HOME/go/bin
+set -x PATH /usr/local/go/bin $PATH
+
+set -x PATH $GOBIN $PATH
+
+function install_rbenv
+  if test ! -d ~/.rbenv
+      set orig_dir (pwd)
+      cd ~
+      git clone https://github.com/sstephenson/rbenv.git
+      mv rbenv .rbenv
+      cd rbenv
+      mkdir plugins
+      cd plugins
+      git clone https://github.com/sstephenson/ruby-build.git
+      cd $orig_dir
+      # Still need to do more things here
+  else
+      echo ~/.rbenv already exists!
+  end
+end
 
 # Can't get this to work
 #if test -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM
@@ -49,3 +66,55 @@ set -x EDITOR vi
 function bundle-bootstrap
     bundle install --binstubs=.bundle/bin path=.bundle/gems
 end
+
+# Note: Modified version of 'Informative Git Prompt'
+set -g __fish_git_prompt_show_informative_status 1
+set -g __fish_git_prompt_hide_untrackedfiles 1
+
+set -g __fish_git_prompt_color_branch magenta bold
+set -g __fish_git_prompt_showupstream "informative"
+set -g __fish_git_prompt_char_upstream_ahead "↑"
+set -g __fish_git_prompt_char_upstream_behind "↓"
+set -g __fish_git_prompt_char_upstream_prefix ""
+
+set -g __fish_git_prompt_char_stagedstate "●"
+set -g __fish_git_prompt_char_dirtystate "✚"
+set -g __fish_git_prompt_char_untrackedfiles "…"
+set -g __fish_git_prompt_char_conflictedstate "✖"
+set -g __fish_git_prompt_char_cleanstate "✔"
+
+set -g __fish_git_prompt_color_dirtystate blue
+set -g __fish_git_prompt_color_stagedstate yellow
+set -g __fish_git_prompt_color_invalidstate red
+set -g __fish_git_prompt_color_untrackedfiles $fish_color_normal
+set -g __fish_git_prompt_color_cleanstate green bold
+
+
+function fish_prompt --description 'Write out the prompt'
+
+  set -l last_status $status
+
+  if not set -q __fish_prompt_normal
+    set -g __fish_prompt_normal (set_color normal)
+  end
+
+  # PWD
+  set_color $fish_color_cwd
+  echo -n (prompt_pwd)
+  set_color normal
+
+  printf '%s' (__fish_git_prompt)
+
+  if not test $last_status -eq 0
+      set_color $fish_color_error
+  end
+
+  echo -n '> '
+
+end
+
+# Load rbenv automatically by adding
+# the following to ~/.config/fish/config.fish:
+
+status --is-interactive; and . (rbenv init -|psub)
+
