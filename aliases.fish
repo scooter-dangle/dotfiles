@@ -172,7 +172,8 @@ end
 function GP
     git push $argv
 end
-function gsolt --description "Default git push for minor tweak for soluteandsolvent.com subdomain"
+function gsolt \
+  --description "Default git push for minor tweak for soluteandsolvent.com subdomain"
     git commit --all --message $argv
     and git push origin master
     and git push dokku master
@@ -201,7 +202,8 @@ function vv
     vim . $argv
 end
 
-function vimp --description "Run vim with project.vim enabled"
+function vimp \
+  --description "Run vim with project.vim enabled"
     # Note: Requires project.vim as well as code in vimrc to look
     # for bundle_project_dot_vim variable
     vim --cmd "let bundle_project_dot_vim = 1" $argv
@@ -211,16 +213,19 @@ function pp
     pygmentize $argv
 end
 
-function s --description "Find the given argument in any file within the current directory or its subdirectories"
+function s \
+  --description "Find the given argument in any file within the current directory or its subdirectories"
     grep $argv -RIin .
     or echo $argv[1] not found
 end
 
-function l --description "Grab a particular line from file or pipe" \
+function l \
+  --description "Grab a particular line from file or pipe" \
   --argument-names target
     paj 1 $target
 end
-function paj --description "Paginate result chunk" \
+function paj \
+  --description "Paginate result chunk" \
   --argument-names increment chunk
     set startIndex (math "("$chunk" + 1) *"$increment)
     head -n $startIndex \
@@ -231,20 +236,24 @@ function md
     and cd $argv[1]
 end
 
-function psfind --description "Search for processes with a given string."
+function psfind \
+  --description "Search for processes with a given string."
     ps -A \
     | grep $argv \
     | grep grep --invert-match
 end
 
-function justpid --description "Extracts pid from psfind"
+function justpid \
+  --description "Extracts pid from psfind"
     sed --regexp-extended 's/^\s*([0-9]+)\s+.*$/\1/g'
 end
 
-function composer --description "php package manager"
+function composer \
+  --description "php package manager"
     php ~/emoxie/composer.phar $argv
 end
-function phpdoc_gen --description "Run phpdoc in current directory"
+function phpdoc_gen \
+  --description "Run phpdoc in current directory"
     phpdoc -d . -t docs
 end
 
@@ -304,12 +313,14 @@ function bundle-bootstrap
     bundle install --shebang (which ruby) --binstubs=.bundle/bin --path .bundle/gems
 end
 
-function parallel --description "Provide POSIX shell to Gnu parallel"
+function parallel \
+  --description "Provide POSIX shell to Gnu parallel"
     set -lx SHELL bash
     command parallel $argv
 end
 
-function podders --description "Run Hpodder with necessary intermediate shell steps"
+function podders \
+  --description "Run Hpodder with necessary intermediate shell steps"
     set current_dir (pwd)
     hpodder update
     cd ~/.hpodder
@@ -319,16 +330,19 @@ function podders --description "Run Hpodder with necessary intermediate shell st
 end
 
 # easy fix
-function uname --description "If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article"
+function uname \
+  --description "If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article"
     command uname $argv \
     | sed 's/GNU\/Linux/Linux/g'
 end
 
-function mmc --description "Mercury Compiler, version 14.01"
+function mmc \
+  --description "Mercury Compiler, version 14.01"
     ~/.mercury/scripts/mmc $argv
 end
 
-function img --description "Fake Erlang image parser"
+function img \
+  --description "Fake Erlang image parser"
     set current_dir (pwd)
     bk
     set prev_dir (pwd)
@@ -338,7 +352,8 @@ function img --description "Fake Erlang image parser"
     cd $current_dir
 end
 
-function f --description "Find files with the given argument in their name in the current directory or its subdirectories"
+function f \
+  --description "Find files with the given argument in their name in the current directory or its subdirectories"
     find . $argv[1] ^ /dev/null \
     | grep -i $argv[1]"[^/]*\$"
 end
@@ -347,7 +362,8 @@ function blerg
     echo blerg $argv[1] ferg snerg
 end
 
-function lsusers --description "List all users"
+function lsusers \
+  --description "List all users"
     cat /etc/passwd
 end
 
@@ -359,7 +375,8 @@ function tm
     end
 end
 
-function xcape --description "Run xcape keymappings"
+function xcape \
+  --description "Run xcape keymappings"
     ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'
     ~/apps/xcape/xcape -e 'Control_L=Escape'
 end
