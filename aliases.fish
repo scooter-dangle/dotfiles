@@ -1,5 +1,6 @@
 # Tip from M Subelsky:
 set -u aliases ~/.config/fish/aliases.fish
+
 function ea \
   --description "Edit Aliases (and then reload "$aliases")"
     vim $aliases
@@ -75,7 +76,7 @@ function func_blocks \
     while test $m -le $total_results
         cat $aliases \
         |   head -n $out_end_lines[$m] \
-        |   tail -n (++ (math $out_end_lines[$m]" - "$out_start_lines[$m]))
+        |   tail -n (++ (— $out_end_lines[$m] $out_start_lines[$m]))
         set m (++ $m)
     end
     return 0
@@ -86,15 +87,7 @@ function +_2 --argument-names term1 term2
 end
 
 function +
-    set out 0
-    set n 1
-    set total_addends (count $argv)
-    while ≤ $n $total_addends
-        set out (+_2 $out $argv[$n])
-        set n (++ $n)
-    end
-    echo $out
-    return 0
+    reduce +_2 0 $argv
 end
 
 function —
@@ -122,29 +115,93 @@ function ÷
 end
 
 function fact --argument-names n
-    × (range $n)
+    × (… $n)
 end
 
 function == --argument-names leftside rightside
     return (test $leftside = $rightside)
 end
 
+function != --argument-names leftside rightside
+    return (test $leftside != $rightside)
+end
+
+set -u alphabet a b c d e f g h i j k l m n o p q r s t u v w x y z
+set -u Alphabet A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
 function range
-    if == 1 (count $argv)
+    … $argv
+end
+
+function …
+    set compare ≤
+    switch (count $argv)
+    case 1
         set i 1
         set n $argv[1]
-    else if == 2 (count $argv)
+        set incr 1
+    case 2
         set i $argv[1]
         set n $argv[2]
-    else
+        set incr 1
+    case 3
+        set i $argv[1]
+        set n $argv[2]
+        set incr $argv[3]
+        if « $incr 0
+            set compare ≥
+        end
+    case '*'
         return 1
     end
 
-    while ≤ $i $n
+    if contains -- $n $alphabet
+        if == 1 $i
+            set i $alphabet[$i]
+        end
+        set source_size (count $alphabet)
+        at_all $source_size $alphabet (… (contains --index $i $alphabet) (contains --index $n $alphabet) $incr)
+        return 0
+    else if contains -- $n $Alphabet
+        if == 1 $i
+            set i $Alphabet[$i]
+        end
+        set source_size (count $Alphabet)
+        at_all $source_size $Alphabet (… (contains --index $i $Alphabet) (contains --index $n $Alphabet) $incr)
+        return 0
+    end
+
+    while eval $compare $i $n
         echo $i
+        set i (+ $i $incr)
+    end
+    return 0
+end
+
+function at
+    set index $argv[-1]
+    $argv[$index]
+end
+
+function at_all --argument-names source_length
+    set i (+ $source_length 2)
+    set final (count $argv)
+    while ≤ $i $final
+        echo $argv[(++ $argv[$i])]
         set i (++ $i)
     end
     return 0
+end
+
+function flip
+    set tmp     $argv[2]
+    set argv[2] $argv[3]
+    set argv[3] $tmp
+    eval $argv
+end
+
+function op --argument-names arg1 operator arg2
+    eval $operator $arg1 $arg2
 end
 
 function map --argument-names cmd
@@ -179,15 +236,15 @@ function reverse
 end
 
 function decrement --argument-names i
-    math $i" - 1"
+    — $i 1
 end
 
 function increment --argument-names i
-    math $i" + 1"
+    ++ $i
 end
 
 function ++ --argument-names i
-    math $i" + 1"
+    +_2 $i 1
 end
 
 function « --argument-names left_side right_side
@@ -346,7 +403,7 @@ end
 function paj \
   --description "Paginate result chunk" \
   --argument-names increment chunk
-    set startIndex (math (++ $chunk)" *"$increment)
+    set startIndex (× (++ $chunk) $increment)
     head -n $startIndex \
     | tail -n $increment
 end
