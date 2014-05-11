@@ -226,6 +226,19 @@ function reduce --argument-names cmd init_val
     return 0
 end
 
+function filter --argument-names cmd
+    set i 2
+    set final (count $argv)
+    while ≤ $i $final
+        set element $argv[$i]
+        if eval $cmd $element
+            echo $element
+        end
+        set i (++ $i)
+    end
+    return 0
+end
+
 function reverse
     set i (count $argv)
     while ≥ $i 1
