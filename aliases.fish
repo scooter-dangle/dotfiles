@@ -6,11 +6,9 @@ function ea \
     and . $aliases
 end
 
-function ag_old
-    if test (grep -l "function "$argv[1] $aliases)
-        set target "function "$argv[1]
-    else
-        set target $argv[1]
+function ag_old --argument-names target
+    if test (grep -l "function "$target $aliases)
+        set target "function "$target
     end
     grep $target $aliases ^ /dev/null \
     | pp_fish_aliases \
@@ -50,26 +48,26 @@ function func_blocks \
     while begin test $n -le $total_functions
             and test $i -le $total_matches
           end
-        if  begin test $argv[$i] -ge $func_start_lines[$n]
-              and test $argv[$i] -lt $func_end_lines[$n]
+        if  begin ≥ $argv[$i] $func_start_lines[$n]
+              and « $argv[$i] $func_end_lines[$n]
             end
-            set next_index (increment (count $out_start_lines))
+            set next_index (++ (count $out_start_lines))
             set out_start_lines[$next_index] $func_start_lines[$n]
             set out_end_lines[$next_index]   $func_end_lines[$n]
-            set i (increment $i)
+            set i (++ $i)
 
             # Eat up additional grep matches for $target
             # from the current function block (i.e., move on
             # from any further grepped matches in this current
             # function...we already marked this block for output)
-            while begin test $i -le $total_matches
-                    and test $argv[$i] -ge $out_start_lines[-1]
-                    and test $argv[$i] -lt $out_end_lines[-1]
+            while begin ≤ $i $total_matches
+                    and ≥ $argv[$i] $out_start_lines[-1]
+                    and « $argv[$i] $out_end_lines[-1]
                   end
-                set i (increment $i)
+                set i (++ $i)
             end
         end
-        set n (increment $n)
+        set n (++ $n)
     end
 
     set total_results (count $out_start_lines)
@@ -77,14 +75,135 @@ function func_blocks \
     while test $m -le $total_results
         cat $aliases \
         |   head -n $out_end_lines[$m] \
-        |   tail -n (increment (math $out_end_lines[$m]" - "$out_start_lines[$m]))
-        set m (increment $m)
+        |   tail -n (++ (math $out_end_lines[$m]" - "$out_start_lines[$m]))
+        set m (++ $m)
     end
     return 0
 end
 
+function +_2 --argument-names term1 term2
+    math $term1" + "$term2
+end
+
+function +
+    set out 0
+    set n 1
+    set total_addends (count $argv)
+    while ≤ $n $total_addends
+        set out (+_2 $out $argv[$n])
+        set n (++ $n)
+    end
+    echo $out
+    return 0
+end
+
+function —
+    if == 1 (count $argv)
+        — 0 $argv[1]
+    else
+        math $argv[1]" - "$argv[2]
+    end
+end
+
+function ×_2 --argument-names factor1 factor2
+    math $factor1" * "$factor2
+end
+
+function ×
+    reduce ×_2 1 $argv
+end
+
+function ÷
+    if == 1 (count $argv)
+        ÷ 1 $argv[1]
+    else
+        math $argv[1]" / "$argv[2]
+    end
+end
+
+function fact --argument-names n
+    × (range $n)
+end
+
+function == --argument-names leftside rightside
+    return (test $leftside = $rightside)
+end
+
+function range
+    if == 1 (count $argv)
+        set i 1
+        set n $argv[1]
+    else if == 2 (count $argv)
+        set i $argv[1]
+        set n $argv[2]
+    else
+        return 1
+    end
+
+    while ≤ $i $n
+        echo $i
+        set i (++ $i)
+    end
+    return 0
+end
+
+function map --argument-names cmd
+    set i 2
+    set size (count $argv)
+    while ≤ $i $size
+        echo (eval $cmd $argv[$i])
+        set i (++ $i)
+    end
+    return 0
+end
+
+function reduce --argument-names cmd init_val
+    set i 3
+    set size (count $argv)
+    set out $init_val
+    while ≤ $i $size
+        set out (eval $cmd $out $argv[$i])
+        set i (++ $i)
+    end
+    echo $out
+    return 0
+end
+
+function reverse
+    set i (count $argv)
+    while ≥ $i 1
+        echo $argv[$i]
+        set i (decrement $i)
+    end
+    return 0
+end
+
+function decrement --argument-names i
+    math $i" - 1"
+end
+
 function increment --argument-names i
     math $i" + 1"
+end
+
+function ++ --argument-names i
+    math $i" + 1"
+end
+
+function « --argument-names left_side right_side
+    return (test $left_side -lt $right_side)
+end
+
+function ≤ --argument-names left_side right_side
+    return (test $left_side -le $right_side)
+end
+
+function » --argument-names left_side right_side
+    return (test $left_side -gt $right_side)
+end
+
+function ≥ --argument-names left_side right_side
+    return (test $left_side -ge $right_side)
 end
 
 function al
@@ -227,7 +346,7 @@ end
 function paj \
   --description "Paginate result chunk" \
   --argument-names increment chunk
-    set startIndex (math "("$chunk" + 1) *"$increment)
+    set startIndex (math (++ $chunk)" *"$increment)
     head -n $startIndex \
     | tail -n $increment
 end
