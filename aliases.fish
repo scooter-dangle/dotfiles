@@ -276,6 +276,21 @@ function ≥ --argument-names left_side right_side
     return (test $left_side -ge $right_side)
 end
 
+function anon --argument-names cmd
+    set i 2
+    set total (count $argv)
+    while ≤ $i $total
+        set regex 's/\<a('(decrement $i)')\>/'$argv[$i]'/g'
+        set cmd (echo $cmd | sed --regexp-extended $regex)
+        set i (++ $i)
+    end
+    eval $cmd
+end
+
+function £
+    anon $argv
+end
+
 function al
     pp_fish_aliases $aliases \
     | pygmenter \
