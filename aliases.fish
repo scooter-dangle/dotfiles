@@ -284,6 +284,11 @@ function anon --argument-names cmd
         set cmd (echo $cmd | sed --regexp-extended $regex)
         set i (++ $i)
     end
+
+    # Allow nested anonymous functions
+    set regex 's/\<a(a+[0-9]+)\>/\1/g'
+    set cmd (echo $cmd | sed --regexp-extended $regex)
+
     eval $cmd
 end
 
