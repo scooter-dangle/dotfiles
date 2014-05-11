@@ -280,13 +280,13 @@ function anon --argument-names cmd
     set i 2
     set total (count $argv)
     while ≤ $i $total
-        set regex 's/\<a('(decrement $i)')\>/'$argv[$i]'/g'
+        set regex 's/\<A('(decrement $i)')\>/'$argv[$i]'/g'
         set cmd (echo $cmd | sed --regexp-extended $regex)
         set i (++ $i)
     end
 
     # Allow nested anonymous functions
-    set regex 's/\<a(a+[0-9]+)\>/\1/g'
+    set regex 's/\<Aa(a*[0-9]+)\>/A\1/g'
     set cmd (echo $cmd | sed --regexp-extended $regex)
 
     eval $cmd
