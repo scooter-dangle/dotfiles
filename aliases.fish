@@ -569,3 +569,7 @@ function xcape \
     ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'
     ~/apps/xcape/xcape -e 'Control_L=Escape'
 end
+
+function downpour_mp3_rename
+    rename 's/\s*\(Unabridged\).* (\d+ of \d+)\](\.mp3)/ $1$2/g' *
+end
