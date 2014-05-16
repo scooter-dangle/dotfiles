@@ -586,7 +586,9 @@ end
 
 function xcape \
   --description "Run xcape keymappings"
+    # For faster tmux use
     ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'
+    # For vim happiness
     ~/apps/xcape/xcape -e 'Control_L=Escape'
 end
 
