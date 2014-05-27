@@ -82,6 +82,41 @@ function func_blocks \
     return 0
 end
 
+function amath \
+  --description "'Advanced' math (bc with math library option)"
+    echo $argv | bc --mathlib
+end
+
+function floor \
+  --description 'Arithmetic floor function'
+    echo $argv | sed --regexp-extended 's/^\./0./' | sed --regexp-extended  's/^([0-9]+)\.?[0-9]*$/\\1/'
+end
+
+function make_playlist --argument-names artist_name
+    # TODO: Ensure that this works with other artists
+    set num_padding (++ (floor (log (count *''$artist_name''*))))
+    mkdir Playlists/''$artist_name''
+    set i 1
+    for album in *''$artist_name''*
+        for song in (ls $album)
+            ln --symbolic   ../../''$album''"/"''$song''  Playlists/''$artist_name''/(printf "%."$num_padding"d" $i)\ -\ ''$album''\ -\ ''$song''
+        end
+        set i (++ $i)
+    end
+end
+
+function log --argument-names argument base \
+  --description 'Logarithm of 1st argument in base of 2nd argument (defaults to base 10)'
+    if == (count $argv) 1
+        set base 10
+    end
+    if == $base e
+        amath "l($argument)"
+    else
+        amath "l($argument)/l($base)"
+    end
+end
+
 function +_2 --argument-names term1 term2
     math $term1" + "$term2
 end
@@ -293,7 +328,18 @@ function anon --argument-names cmd
 end
 
 function £
-    anon $argv
+    set -l clean_args (echo $argv | quote-escape)
+    echo '\'anon \\\\\\\''$clean_args'\\\\\\\'\''
+end
+
+function quote-escape
+    sed --regexp-extended \
+        --expression "s_((\\\\)+)_\\1\\1\\1\\1_g" \
+        --expression "s_([^\\\\]?)(')_\\1\\\\\\\\\\\\\\\\\\\\\\2_g"
+end
+
+function quote-unescape
+    sed --expression s/\\\\\'/\'/g
 end
 
 function al
@@ -345,6 +391,20 @@ function bk
 end
 function hm
     cd ~
+end
+
+function pwdd --argument-names prev_path_fragment new_path_fragment \
+  --description "Echo current directory through sed replace"
+    pwd | sed "s/$prev_path_fragment/$new_path_fragment/g"
+end
+
+function cdd --argument-names prev_path_fragment new_path_fragment \
+  --description "Attempt to mimic zsh cd command"
+    if == (count $argv) '2'
+        cd (pwdd $argv)
+    else
+        cd $argv
+    end
 end
 
 function qcount \
