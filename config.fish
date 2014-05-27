@@ -19,6 +19,8 @@ set -x PATH /usr/local/go/bin $PATH
 
 set -x PATH $GOBIN $PATH
 
+set -x PATH $HOME/.luarocks/bin $PATH
+
 function install_rbenv
   if test ! -d ~/.rbenv
       set orig_dir (pwd)
