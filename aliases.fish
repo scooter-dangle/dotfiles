@@ -46,8 +46,8 @@ function func_blocks \
     set i 1
     set total_functions (count $func_start_lines)
     set n 1
-    while begin test $n -le $total_functions
-            and test $i -le $total_matches
+    while begin ≤ $n $total_functions
+            and ≤ $i $total_matches
           end
         if  begin ≥ $argv[$i] $func_start_lines[$n]
               and « $argv[$i] $func_end_lines[$n]
@@ -73,7 +73,7 @@ function func_blocks \
 
     set total_results (count $out_start_lines)
     set m 1
-    while test $m -le $total_results
+    while ≤ $m $total_results
         cat $aliases \
         |   head -n $out_end_lines[$m] \
         |   tail -n (++ (— $out_end_lines[$m] $out_start_lines[$m]))
