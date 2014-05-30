@@ -27,7 +27,7 @@ function install_rbenv
       cd ~
       git clone https://github.com/sstephenson/rbenv.git
       mv rbenv .rbenv
-      cd rbenv
+      cd .rbenv
       mkdir plugins
       cd plugins
       git clone https://github.com/sstephenson/ruby-build.git
