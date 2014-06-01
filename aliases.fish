@@ -600,7 +600,7 @@ end
 
 # easy fix
 function uname \
-  --description "If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article"
+  --description "The full documentation for Linux is maintained as a Wikipedia article. If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article."
     command uname $argv \
     | sed 's/GNU\/Linux/Linux/g'
 end
