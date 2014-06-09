@@ -21,6 +21,12 @@ set -x PATH $GOBIN $PATH
 
 set -x PATH $HOME/.luarocks/bin $PATH
 
+# Vim mode doesn't feel ready yet :(
+# function fish_prompt
+#   fish_vi_prompt
+# end
+# set fish_key_bindings fish_vi_key_bindings
+
 function install_rbenv
   if test ! -d ~/.rbenv
       set orig_dir (pwd)
