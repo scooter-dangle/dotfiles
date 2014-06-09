@@ -1,22 +1,14 @@
-# Tip from M Subelsky:
 set -u aliases ~/.config/fish/aliases.fish
 
+# Tip from M Subelsky:
 function ea \
-  --description "Edit Aliases (and then reload "$aliases")"
+  --description "Edit Aliases (and then reload them)"
     vim $aliases
     and . $aliases
 end
 
-function ag_old --argument-names target
-    if test (grep -l "function "$target $aliases)
-        set target "function "$target
-    end
-    grep $target $aliases ^ /dev/null \
-    | pp_fish_aliases \
-    | pygmenter \
-    | highlight $target
-end
-
+# Further tip from B'More on Rails Meetup that was also
+# the source of the preceding tip
 function ag --argument-names target \
   --description "Aliases Grep"
     if test (grep -l "function "$target $aliases)
@@ -46,11 +38,11 @@ function func_blocks \
     set i 1
     set total_functions (count $func_start_lines)
     set n 1
-    while begin ≤ $n $total_functions
-            and ≤ $i $total_matches
-          end
-        if  begin ≥ $argv[$i] $func_start_lines[$n]
-              and « $argv[$i] $func_end_lines[$n]
+    while begin; ≤ $n $total_functions
+             and ≤ $i $total_matches
+      end
+        if  begin; ≥ $argv[$i] $func_start_lines[$n]
+               and « $argv[$i] $func_end_lines[$n]
             end
             set next_index (++ (count $out_start_lines))
             set out_start_lines[$next_index] $func_start_lines[$n]
@@ -61,9 +53,9 @@ function func_blocks \
             # from the current function block (i.e., move on
             # from any further grepped matches in this current
             # function...we already marked this block for output)
-            while begin ≤ $i $total_matches
-                    and ≥ $argv[$i] $out_start_lines[-1]
-                    and « $argv[$i] $out_end_lines[-1]
+            while begin; ≤ $i $total_matches
+                     and ≥ $argv[$i] $out_start_lines[-1]
+                     and « $argv[$i] $out_end_lines[-1]
                   end
                 set i (++ $i)
             end
@@ -89,17 +81,100 @@ end
 
 function floor \
   --description 'Arithmetic floor function'
-    echo $argv | sed --regexp-extended 's/^\./0./' | sed --regexp-extended  's/^([0-9]+)\.?[0-9]*$/\\1/'
+    echo $argv \
+    | sed --regexp-extended 's/^\./0./' \
+    | sed --regexp-extended  's/^([0-9]+)\.?[0-9]*$/\\1/'
+end
+
+function digit_padding_width
+    ++ (floor (log (count $argv)))
+end
+
+function trash \
+  --description "Simple imitation of trash-cli"
+    for item in $argv
+        __trash $item
+    end
+end
+
+function __trash --argument-names item trash_base_dir \
+  --description "Worker function behind trash function...use trash instead."
+    # $trash_base_dir must either be a subdirectory of $TRASH where
+    # the final directory name is a number or nil
+    set TRASH ~/Trash
+
+    if « (count $argv) 2
+        set trash_base_dir $TRASH
+        set trash_count 0
+    else
+        set trash_count (++ (basename $trash_base_dir))
+    end
+
+    set orig_item $item
+    set item (pwd)"/"$item
+    set parent_dir (dirname $item)
+    set trash_parent $trash_base_dir$parent_dir
+    set trash_item $trash_base_dir$item
+
+    if test -e $trash_item
+        if begin
+                test -f $trash_item
+                and test -f $item
+                and == (cat $item | md5sum) (cat $trash_item | md5sum)
+            end
+            # Current target already exists and is same as file
+            # already in trash...just remove the current file
+            rm $item
+            echo $trash_item
+        else
+            __trash ''$orig_item'' ''$TRASH/$trash_count''
+        end
+    else
+        if not test -e $trash_parent
+            mkdir --parents $trash_parent
+        end
+        mv $item $trash_parent/
+        echo $trash_item
+        return 0
+    end
+end
+
+function restore --argument item \
+  --description "For use within Trash directory...use with caution"
+    set TRASH ~/Trash
+    set orig_item $item
+    set item (pwd)"/"$item
+    set parent_dir (dirname $item)
+    set outside_item (echo $item | sed 's#'$TRASH'##g')
+    set outside_parent_dir (dirname $outside_item)
+    if != "$parent_dir" "$TRASH$outside_parent_dir"
+        echo restore can only be used from within $TRASH
+        return 1
+    end
+    if test -e $outside_item
+        echo cannot restore...item already exists:
+        echo $outside_item
+        return 1
+    else if test -d $outside_parent_dir
+        mv ''$item'' ''$outside_item''
+        echo $outside_item
+        return 0
+    else
+        echo cannot restore...former item directory not found:
+        echo $outside_parent_dir
+        return 1
+    end
 end
 
 function make_playlist --argument-names artist_name
     # TODO: Ensure that this works with other artists
-    set num_padding (++ (floor (log (count *''$artist_name''*))))
+    set num_padding (digit_padding_width *''$artist_name''*/*/*)
     mkdir Playlists/''$artist_name''
     set i 1
-    for album in *''$artist_name''*
-        for song in (ls $album)
-            ln --symbolic   ../../''$album''"/"''$song''  Playlists/''$artist_name''/(printf "%."$num_padding"d" $i)\ -\ ''$album''\ -\ ''$song''
+    # for album in *''$artist_name''*
+    for album in (ls --indicator-style=none ''$artist_name'')
+        for song in (ls ''$artist_name/$album'')
+            ln --symbolic ../../''$artist_name/$album/$song''  Playlists/''$artist_name''/(printf "%."$num_padding"d" $i)\ -\ ''$album''\ -\ ''$song''
         end
         set i (++ $i)
     end
@@ -110,11 +185,10 @@ function log --argument-names argument base \
     if == (count $argv) 1
         set base 10
     end
-    if == $base e
-        amath "l($argument)"
-    else
-        amath "l($argument)/l($base)"
+    if != $base e
+        set denominator "/l($base)"
     end
+    amath "l($argument)$denominator"
 end
 
 function +_2 --argument-names term1 term2
@@ -215,7 +289,25 @@ end
 
 function at
     set index $argv[-1]
-    $argv[$index]
+    echo $argv[$index]
+end
+
+function evacuate_podders \
+  --description "Use with caution...setup-specific"
+    set current_dir (pwd)
+    set origin /media/scott/USB30FD/podcasts
+    cd $origin
+    for podcast in (ls)
+        set podcast_dir ~/podcasts/$podcast
+        cd $podcast_dir
+        set episodes (filter 'test -f' (ls))
+        cd $origin
+        for episode in $episodes
+            echo migrating $episode
+            mv $podcast_dir''$episode $podcast
+        end
+    end
+    cd $current_dir
 end
 
 function at_all --argument-names source_length
@@ -249,27 +341,30 @@ function map --argument-names cmd
     return 0
 end
 
-function reduce --argument-names cmd init_val
-    set i 3
-    set size (count $argv)
-    set out $init_val
-    while ≤ $i $size
-        set out (eval $cmd $out $argv[$i])
-        set i (++ $i)
+function reduce --argument-names cmd memo
+    for element in $argv[3..-1]
+        set memo (eval $cmd $memo $element)
     end
-    echo $out
+    echo $memo
     return 0
 end
 
+# function +
+#     set eval_string $argv[1]
+#     for element in $argv[2..-1]
+#         set eval_string "$eval_string + $element"
+#     end
+#     math $eval_string
+# end
+
 function filter --argument-names cmd
-    set i 2
-    set final (count $argv)
-    while ≤ $i $final
-        set element $argv[$i]
+    if « (count $argv) 2
+        return 0
+    end
+    for element in $argv[2..-1]
         if eval $cmd $element
             echo $element
         end
-        set i (++ $i)
     end
     return 0
 end
@@ -328,11 +423,13 @@ function anon --argument-names cmd
 end
 
 function £
+    # Broken  :(
     set -l clean_args (echo $argv | quote-escape)
     echo '\'anon \\\\\\\''$clean_args'\\\\\\\'\''
 end
 
 function quote-escape
+    # Doesn't work so well  :(
     sed --regexp-extended \
         --expression "s_((\\\\)+)_\\1\\1\\1\\1_g" \
         --expression "s_([^\\\\]?)(')_\\1\\\\\\\\\\\\\\\\\\\\\\2_g"
@@ -596,6 +693,7 @@ function podders \
     ruby update_auth.rb
     cd $current_dir
     hpodder download
+    evacuate_podders
 end
 
 # easy fix
@@ -627,21 +725,13 @@ function f \
     | grep -i $argv[1]"[^/]*\$"
 end
 
-function blerg
-    echo blerg $argv[1] ferg snerg
+function blerg --argument-names the_royal_nergin
+    echo blerg $the_royal_nergin ferg snerg
 end
 
 function lsusers \
   --description "List all users"
     cat /etc/passwd
-end
-
-function tm
-    if test (tmux ls)
-        tmux -2 attach
-    else
-        tmux -2
-    end
 end
 
 function xcape \
@@ -654,4 +744,16 @@ end
 
 function downpour_mp3_rename
     rename 's/\s*\(Unabridged\).* (\d+ of \d+)\](\.mp3)/ $1$2/g' *
+end
+
+function downpour_all --argument-names book
+    set book_name ''(echo $book | sed 's/\.zip$//g' | sed 's/ (Unabridged) .*$//g')''
+    mkdir $book_name
+    mv $book $book_name/
+    cd $book_name
+    unzip $book
+    trash $book
+    downpour_mp3_rename
+    cd ..
+    mv $book_name ~/Audiobooks/
 end
