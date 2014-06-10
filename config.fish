@@ -86,19 +86,43 @@ end
 # Rake completion helper
 function rake_args
   set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
-  set tmp_file /tmp/Rakefile.tasks.complete.$checksum
-  if not test -f $tmp_file
+  set task_full  /tmp/Rakefile.tasks.full.$checksum
+  set task_names /tmp/Rakefile.tasks.names.$checksum
+  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
+  if not test -f $task_names
     if test -f Gemfile
       set rake_prefix 'bundle exec'
     end
+
     eval $rake_prefix rake -T \
-    | sed --regexp-extended   's/^rake (((\w|[\[\]])+)(\:(\w|[\[\]])+)*) +# (.+)/\1/' \
-    > $tmp_file
+    | sed --regexp-extended   's/^rake (((\w|[\[\]])+)(\:(\w|[\[\]])+)*) +# (.+)$/\1 # \6/' \
+    > $task_full
+
+    cat $task_full \
+    | sed --regexp-extended   's/^([^#]+) # (.+)$/\1/' \
+    > $task_names
+
+    cat $task_full \
+    | sed --regexp-extended   's/^([^#]+) # (.+)$/\2/' \
+    > $task_desc
+
   end
-  cat $tmp_file
+  cat $task_names
 end
 
-complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --description 'rake_desc' --no-files
+# Rake completion helper
+# Doesn't work  :(
+function rake_desc
+  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
+  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
+  if test -f $task_desc
+    cat $task_desc
+  else
+    echo rake task
+  end
+end
+
+complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --description '(rake_desc)' --no-files
 
 # Note: Modified version of 'Informative Git Prompt'
 set -g __fish_git_prompt_show_informative_status 1
