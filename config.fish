@@ -75,6 +75,31 @@ function bundle-bootstrap
     bundle install --binstubs=.bundle/bin path=.bundle/gems
 end
 
+# Rake completion helper
+function test_for_rake
+  begin
+    test -f Rakefile
+    or test -f rakefile
+  end
+end
+
+# Rake completion helper
+function rake_args
+  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
+  set tmp_file /tmp/Rakefile.tasks.complete.$checksum
+  if not test -f $tmp_file
+    if test -f Gemfile
+      set rake_prefix 'bundle exec'
+    end
+    eval $rake_prefix rake -T \
+    | sed --regexp-extended   's/^rake (((\w|[\[\]])+)(\:(\w|[\[\]])+)*) +# (.+)/\1/' \
+    > $tmp_file
+  end
+  cat $tmp_file
+end
+
+complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --description 'rake_desc' --no-files
+
 # Note: Modified version of 'Informative Git Prompt'
 set -g __fish_git_prompt_show_informative_status 1
 set -g __fish_git_prompt_hide_untrackedfiles 1
