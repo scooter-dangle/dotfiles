@@ -97,24 +97,24 @@ function trash \
     end
 end
 
-function __trash --argument-names item trash_base_dir \
+function __trash --argument-names item __trash_base_dir \
   --description "Worker function behind trash function...use trash instead."
-    # $trash_base_dir must either be a subdirectory of $TRASH where
-    # the final directory name is a number or nil
+    # $__trash_base_dir must either be nil or an immediate subdirectory
+    # of $TRASH where the final directory name is a number
     set TRASH ~/Trash
 
     if « (count $argv) 2
-        set trash_base_dir $TRASH
+        set __trash_base_dir $TRASH
         set trash_count 0
     else
-        set trash_count (++ (basename $trash_base_dir))
+        set trash_count (++ (basename $__trash_base_dir))
     end
 
     set orig_item $item
     set item (pwd)"/"$item
     set parent_dir (dirname $item)
-    set trash_parent $trash_base_dir$parent_dir
-    set trash_item $trash_base_dir$item
+    set trash_parent $__trash_base_dir$parent_dir
+    set trash_item $__trash_base_dir$item
 
     if test -e $trash_item
         if begin
