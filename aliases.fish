@@ -17,8 +17,8 @@ function ag --argument-names target \
     set matching_lines (line_number_matches $target $aliases)
     func_blocks $matching_lines \
     | fish_indent \
-    | pygmenter \
-    | highlight $target
+    | __conditionally_pygmentize \
+    | __grep_highlight $target
 end
 
 function line_number_matches --argument-names target target_file
@@ -242,7 +242,8 @@ function range
     … $argv
 end
 
-function …
+function … \
+  --description "Numeric or alphabetic range with optional step"
     set compare ≤
     switch (count $argv)
     case 1
@@ -290,24 +291,6 @@ end
 function at
     set index $argv[-1]
     echo $argv[$index]
-end
-
-function evacuate_podders \
-  --description "Use with caution...setup-specific"
-    set current_dir (pwd)
-    set origin /media/scott/USB30FD/podcasts
-    cd $origin
-    for podcast in (ls)
-        set podcast_dir ~/podcasts/$podcast
-        cd $podcast_dir
-        set episodes (filter 'test -f' (ls))
-        cd $origin
-        for episode in $episodes
-            echo migrating $episode
-            mv $podcast_dir''$episode $podcast
-        end
-    end
-    cd $current_dir
 end
 
 function at_all --argument-names source_length
@@ -436,12 +419,13 @@ function quote-escape
 end
 
 function quote-unescape
+    # Pointless/doesn't work... see preceding function
     sed --expression s/\\\\\'/\'/g
 end
 
 function al
     pp_fish_aliases $aliases \
-    | pygmenter \
+    | __conditionally_pygmentize \
     | more
 end
 
@@ -457,7 +441,7 @@ function prettify_aliases \
     pp_fish_aliases $aliases >  $aliases
 end
 
-function pygmenter --argument-names target \
+function __conditionally_pygmentize --argument-names target \
   --description "Runs argument through pygmentize -lbash only if pygmentize can be found"
     # helper
     if test (which pygmentize)
@@ -467,7 +451,7 @@ function pygmenter --argument-names target \
     end
 end
 
-function highlight --argument-names target
+function __grep_highlight --argument-names target
     # helper
     while read line
         if test (echo $line | grep -l $target ^ /dev/null)
@@ -604,6 +588,8 @@ end
 
 function psfind \
   --description "Search for processes with a given string."
+    # Usually better to just use process expansion (with the percent
+    # sign) instead of this
     ps -A \
     | grep $argv \
     | grep grep --invert-match
@@ -611,6 +597,7 @@ end
 
 function justpid \
   --description "Extracts pid from psfind"
+    # Unnecessary, but I can't remember the right way to do it
     sed --regexp-extended 's/^\s*([0-9]+)\s+.*$/\1/g'
 end
 
@@ -681,6 +668,7 @@ end
 
 function parallel \
   --description "Provide POSIX shell to Gnu parallel"
+    # Can't remember if this actually works...  :(
     set -lx SHELL bash
     command parallel $argv
 end
@@ -694,6 +682,24 @@ function podders \
     cd $current_dir
     hpodder download
     evacuate_podders
+end
+
+function evacuate_podders \
+  --description "Use with caution...setup-specific"
+    set current_dir (pwd)
+    set origin /media/scott/USB30FD/podcasts
+    cd $origin
+    for podcast in (ls)
+        set podcast_dir ~/podcasts/$podcast
+        cd $podcast_dir
+        set episodes (filter 'test -f' (ls))
+        cd $origin
+        for episode in $episodes
+            echo migrating $episode
+            mv $podcast_dir''$episode $podcast
+        end
+    end
+    cd $current_dir
 end
 
 # easy fix
@@ -746,7 +752,12 @@ function downpour_mp3_rename
     rename 's/\s*\(Unabridged\).* (\d+ of \d+)\](\.mp3)/ $1$2/g' *
 end
 
+complete --command downpour_all --arguments '*.zip' --exclusive
 function downpour_all --argument-names book
+    if != (count $argv) 1
+        echo Error: Must specify one argument
+        return 1
+    end
     set book_name ''(echo $book | sed 's/\.zip$//g' | sed 's/ (Unabridged) .*$//g')''
     mkdir $book_name
     mv $book $book_name/
