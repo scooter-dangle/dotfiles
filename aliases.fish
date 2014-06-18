@@ -687,8 +687,14 @@ end
 function evacuate_podders \
   --description "Use with caution...setup-specific"
     set current_dir (pwd)
+
     set origin /media/scott/USB30FD/podcasts
+    if not test -d $origin
+        echo $origin not found
+        return 1
+    end
     cd $origin
+
     for podcast in (ls)
         set podcast_dir ~/podcasts/$podcast
         cd $podcast_dir
