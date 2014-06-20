@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # build_env.sh
 
-sudo apt-get -y install vim-common tmux fish git htop exuberant-ctags build-essential rbenv
+sudo apt-get -y install vim-common tmux fish git htop exuberant-ctags build-essential autoconf bison libssl-dev libyaml-dev libreadline6 libreadline6-dev zlib1g zlib1g-dev libmysqlclient-dev rbenv
 
 cd ~
 git clone https://github.com/scooter-dangle/dotfiles.git
