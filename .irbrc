@@ -47,10 +47,10 @@ end
 
 
 def russian_roulette
-    -> do
-        reset = -> { Array.new(5, nil.to_s).push('exit').shuffle }
+    lambda do
+        reset = lambda { Array.new(5, nil.to_s).push('exit').shuffle }
         barrel = reset[]
-        -> do
+        lambda do
             if barrel.size == 1 then
                 barrel = reset[]
             else
