@@ -19,13 +19,21 @@ set -x PATH /usr/local/go/bin $PATH
 
 set -x PATH $GOBIN $PATH
 
+set -x PATH $HOME/.luarocks/bin $PATH
+
+# Vim mode doesn't feel ready yet :(
+# function fish_prompt
+#   fish_vi_prompt
+# end
+# set fish_key_bindings fish_vi_key_bindings
+
 function install_rbenv
   if test ! -d ~/.rbenv
       set orig_dir (pwd)
       cd ~
       git clone https://github.com/sstephenson/rbenv.git
       mv rbenv .rbenv
-      cd rbenv
+      cd .rbenv
       mkdir plugins
       cd plugins
       git clone https://github.com/sstephenson/ruby-build.git
@@ -66,6 +74,65 @@ set -x EDITOR vi
 function bundle-bootstrap
     bundle install --binstubs=.bundle/bin path=.bundle/gems
 end
+
+# Rake completion helper
+function test_for_rake
+  begin
+    test -f Rakefile
+    or test -f rakefile
+  end
+end
+
+# Rake completion helper
+function rake_args
+  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
+  set task_full  /tmp/Rakefile.tasks.full.$checksum
+  set task_names /tmp/Rakefile.tasks.names.$checksum
+  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
+  if not test -f $task_names
+    if test -f Gemfile
+      set rake_prefix 'bundle exec'
+    end
+
+    eval $rake_prefix rake -T \
+    | sed --regexp-extended   's/^rake (((\w|[\[\]])+)(\:(\w|[\[\]])+)*) +# (.+)$/\1 # \6/' \
+    > $task_full
+
+    cat $task_full \
+    | sed --regexp-extended   's/^([^#]+) # (.+)$/\1/' \
+    > $task_names
+
+    cat $task_full \
+    | sed --regexp-extended   's/^([^#]+) # (.+)$/\2/' \
+    > $task_desc
+
+  end
+  cat $task_names
+end
+
+# Rake completion helper
+# Doesn't work  :(
+function rake_desc
+  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
+  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
+  if test -f $task_desc
+    cat $task_desc
+  else
+    echo rake task
+  end
+end
+
+complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --description '(rake_desc)' --no-files
+
+complete --command lolcat --long-option spread    --short-option p --exclusive --description "Rainbow spread (default: 3.0)"
+complete --command lolcat --long-option freq      --short-option F --exclusive --description "Rainbow frequency (default: 0.1)"
+complete --command lolcat --long-option seed      --short-option S --exclusive --description "Rainbow seed, 0 = random (default: 0)"
+complete --command lolcat --long-option animate   --short-option a             --description "Enable psychedelics"
+complete --command lolcat --long-option duration  --short-option d --exclusive --description "Animation duration (default: 12)"
+complete --command lolcat --long-option speed     --short-option s --exclusive --description "Animation speed (default: 20.0)"
+complete --command lolcat --long-option force     --short-option f             --description "Force color even when stdout is not a tty"
+complete --command lolcat --long-option version   --short-option v             --description "Print version and exit"
+complete --command lolcat --long-option help      --short-option h             --description "Show help message"
 
 # Note: Modified version of 'Informative Git Prompt'
 set -g __fish_git_prompt_show_informative_status 1
