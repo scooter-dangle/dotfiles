@@ -4,3 +4,5 @@
 [alias]
         ci = commit
         co = checkout
+[core]
+	excludesfile = ~/.gitignore_global

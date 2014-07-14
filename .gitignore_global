@@ -1,0 +1,8 @@
+# vim
+.*.swp
+env.vim
+files.list
+/tags
+/.autotest
+/autotest
+
