@@ -183,5 +183,5 @@ end
 # Load rbenv automatically by adding
 # the following to ~/.config/fish/config.fish:
 
-status --is-interactive; and . (rbenv init -|psub)
+status --is-interactive; and which rbenv > /dev/null; and . (rbenv init -|psub)
 
