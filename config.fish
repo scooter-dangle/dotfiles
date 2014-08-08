@@ -3,6 +3,7 @@ status --is-interactive; and . ~/.config/fish/aliases.fish
 set -x NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
 set -x PATH ~/erlang/rebar $PATH
+set -x PATH ~/erlang/concrete $PATH
 set -x PATH ~/.cabal/bin $PATH
 set -x PATH ~/node_modules/.bin $PATH
 set -x PATH $HOME/.rbenv/bin $PATH
