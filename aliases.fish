@@ -774,3 +774,15 @@ function downpour_all --argument-names book
     cd ..
     mv $book_name ~/Audiobooks/
 end
+
+function default_tmux
+    echo "rename-session temp_session
+          new-session -smusic mocp
+          new-window -c~ -tmusic -d
+          new-window -c~ -tmusic -d
+          new-session -snr 'cd ~/neighbor_ride/nr/'
+          new-window -c~/neighbor_ride/nr/ -tnr -d
+          kill-session -ttemp_session" \
+    | tmux -2 -q -C
+    tmux -2 attach
+end
