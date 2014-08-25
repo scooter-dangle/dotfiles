@@ -479,6 +479,15 @@ function pwdd --argument-names prev_path_fragment new_path_fragment \
     pwd | sed "s/$prev_path_fragment/$new_path_fragment/g"
 end
 
+if begin; which brew > /dev/null
+          and   test -e /usr/local/opt/gnu-sed/bin/sed
+   end
+    function sed \
+      --description "Remapping of sed for OS X"
+        /usr/local/opt/gnu-sed/bin/sed $argv
+    end
+end
+
 function cdd --argument-names prev_path_fragment new_path_fragment \
   --description "Attempt to mimic zsh cd command"
     if == (count $argv) '2'
@@ -500,6 +509,7 @@ end
 function bx
     bundle exec $argv
 end
+
 function rsh
     pry --require rake
 end
@@ -507,6 +517,7 @@ end
 function gs
     git status -s $argv
 end
+
 function gd
     git diff -b --color --ignore-all-space $argv
 end
@@ -569,11 +580,17 @@ function s \
     or echo $argv[1] not found
 end
 
+function s_filename \
+  --description "Grab filename from output of 's' function"
+    sed --regexp-extended 's/^([^:]*):.*$/\1/g'
+end
+
 function l \
   --description "Grab a particular line from file or pipe" \
   --argument-names target
     paj 1 $target
 end
+
 function paj \
   --description "Paginate result chunk" \
   --argument-names increment chunk
@@ -785,4 +802,16 @@ function default_tmux
           kill-session -ttemp_session" \
     | tmux -2 -q -C
     tmux -2 attach
+end
+
+if which foreman > /dev/null
+    function fancy_foreman \
+      --description "foreman with RubyMine Ruby args"
+        # Attempt to mimic RubyMine foreman setup
+        # How to use tail came from coderwall.com/p/6qdp5a
+        ruby -e '$stdout.sync=true;$stderr.sync=true;load($0=ARGV.shift)' (which foreman) \
+            $argv \
+            --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail -f '(pwd)'/log/development.log' | psub) | psub) \
+            --root=(pwd)
+    end
 end

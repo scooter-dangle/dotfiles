@@ -22,6 +22,14 @@ set -x PATH $GOBIN $PATH
 
 set -x PATH $HOME/.luarocks/bin $PATH
 
+if which brew > /dev/null
+  set -x PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
+end
+
+if which rvm > /dev/null
+  set -x PATH $HOME/.gems/bin $PATH
+end
+
 # Vim mode doesn't feel ready yet :(
 # function fish_prompt
 #   fish_vi_prompt
@@ -96,7 +104,7 @@ function rake_args
     end
 
     eval $rake_prefix rake -T \
-    | sed --regexp-extended   's/^rake (((\w|[\[\]])+)(\:(\w|[\[\]])+)*) +# (.+)$/\1 # \6/' \
+    | sed --regexp-extended   's/^rake (((\w|\[|\]|-|\,)+)(\:(\w|\[|\]|-|\,)+)*) +# (.+)$/\1 # \6/' \
     > $task_full
 
     cat $task_full \
