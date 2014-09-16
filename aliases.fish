@@ -593,6 +593,16 @@ function sf \
     s $argv | ta 1
 end
 
+function vsf \
+  --description 'Because vim (sf $argv) takes too long'
+    vim (sf $argv) +/$argv
+end
+
+function vpsf \
+  --description 'Because vimp (sf $argv) takes too long'
+    vimp (sf $argv) +/$argv
+end
+
 function l \
   --description "Grab a particular line from file or pipe" \
   --argument-names target
