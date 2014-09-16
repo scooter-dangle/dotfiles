@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<root>
+  <item>
+    <name>Option_L to Option_L</name>
+    <appendix>(+ When you type Option_L only, send Control+S)</appendix>
+    <identifier>remap.optionL2optionL_controlS</identifier>
+    <autogen>__KeyOverlaidModifier__ KeyCode::OPTION_L, KeyCode::OPTION_L, KeyCode::S, ModifierFlag::CONTROL_R</autogen>
+  </item>
+</root>
