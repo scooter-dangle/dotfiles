@@ -92,9 +92,7 @@ end
 
 function trash \
   --description "Simple imitation of trash-cli"
-    for item in $argv
-        __trash $item
-    end
+    map __trash $argv
 end
 
 function __trash --argument-names item __trash_base_dir \
@@ -467,9 +465,11 @@ end
 function up
     cd ..
 end
+
 function bk
     cd -
 end
+
 function hm
     cd ~
 end
@@ -521,18 +521,23 @@ end
 function gd
     git diff -b --color --ignore-all-space $argv
 end
+
 function gl
     git log $argv
 end
+
 function gb
     git branch $argv
 end
+
 function gp
     git pull $argv
 end
+
 function GP
     git push $argv
 end
+
 function gsolt \
   --description "Default git push for minor tweak for soluteandsolvent.com subdomain"
     git commit --all --message $argv
@@ -559,10 +564,6 @@ function ghcd \
     and cd $repo
 end
 
-function vv
-    vim . $argv
-end
-
 function vimp \
   --description "Run vim with project.vim enabled"
     # Note: Requires project.vim as well as code in vimrc to look
@@ -576,13 +577,18 @@ end
 
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    grep $argv -RIin .
+    grep $argv -RIin . | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2/'
     or echo $argv[1] not found
 end
 
-function s_filename \
-  --description "Grab filename from output of 's' function"
-    sed --regexp-extended 's/^([^:]*):.*$/\1/g'
+function ta --argument idx \
+  --description "Shortcut for commonly used awk functionality"
+    awk '{print $'$idx'}'
+end
+
+function sf \
+  --description "Print out filenames where pattern occurs"
+    s $argv | ta 1
 end
 
 function l \
@@ -598,6 +604,7 @@ function paj \
     head -n $startIndex \
     | tail -n $increment
 end
+
 function md
     mkdir --parents $argv[1]
     and cd $argv[1]
@@ -618,10 +625,6 @@ function justpid \
     sed --regexp-extended 's/^\s*([0-9]+)\s+.*$/\1/g'
 end
 
-function composer \
-  --description "php package manager"
-    php ~/emoxie/composer.phar $argv
-end
 function phpdoc_gen \
   --description "Run phpdoc in current directory"
     phpdoc -d . -t docs
@@ -797,8 +800,6 @@ function default_tmux
           new-session -smusic mocp
           new-window -c~ -tmusic -d
           new-window -c~ -tmusic -d
-          new-session -snr 'cd ~/neighbor_ride/nr/'
-          new-window -c~/neighbor_ride/nr/ -tnr -d
           kill-session -ttemp_session" \
     | tmux -2 -q -C
     tmux -2 attach
@@ -811,7 +812,7 @@ if which foreman > /dev/null
         # How to use tail came from coderwall.com/p/6qdp5a
         ruby -e '$stdout.sync=true;$stderr.sync=true;load($0=ARGV.shift)' (which foreman) \
             $argv \
-            --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail -f '(pwd)'/log/development.log' | psub) | psub) \
+            --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail --follow '(pwd)'/log/development.log' | psub) | psub) \
             --root=(pwd)
     end
 end
