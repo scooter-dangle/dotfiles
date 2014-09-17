@@ -534,6 +534,10 @@ function gp
     git pull $argv
 end
 
+function gf
+    git fetch $argv
+end
+
 function GP
     git push $argv
 end
@@ -577,7 +581,7 @@ end
 
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    grep $argv -RIin . | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2/'
+    grep $argv -RIin . | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2 /'
     or echo $argv[1] not found
 end
 
@@ -825,4 +829,35 @@ if which foreman > /dev/null
             --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail --follow '(pwd)'/log/development.log' | psub) | psub) \
             --root=(pwd)
     end
+end
+
+complete --command gmd --arguments '-{l,-local}' --description 'Generate docs for locally bundled gems'
+complete --command gmd --arguments '-{g,-global}' --description 'Generate docs for globally installed gems'
+function gmd --argument scope \
+  --description "gem_docs: Generate ri docs either locally or globally"
+    if == (count $argv) 0
+        set scope --local
+    end
+
+    if begin; == $scope --local; or == $scope -l; end
+        # for bundled gems
+        bundle list \
+        | tr -d '*(,)' \
+        | awk '{print $1, "--version", $2}' \
+        | xargs -n3 gem rdoc --ri --no-rdoc
+    else if begin; == $scope --global; or == $scope -g; end
+        # global gems
+        gem list \
+        | tr -d '(,)' \
+        | awk '{print $1, "--version", $2}' \
+        | xargs -n3 gem rdoc --ri --no-rdoc
+    else
+        echo "Unknown option:\t$scope"
+        return 1
+    end
+end
+
+function skiq \
+  --description "Startup sidekiq worker"
+    rerun --background --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
 end
