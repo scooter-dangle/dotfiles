@@ -92,9 +92,7 @@ end
 
 function trash \
   --description "Simple imitation of trash-cli"
-    for item in $argv
-        __trash $item
-    end
+    map __trash $argv
 end
 
 function __trash --argument-names item __trash_base_dir \
