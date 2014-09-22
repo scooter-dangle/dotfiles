@@ -857,7 +857,20 @@ function gmd --argument scope \
     end
 end
 
+function rtags \
+  --description "Generate ctags for a ruby project"
+    if which rvm > /dev/null
+        set gemdir (rvm gemset dir)
+    end
+    ctags -R . $gemdir
+end
+
 function skiq \
   --description "Startup sidekiq worker"
     rerun --background --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
+end
+
+function swp_all \
+  --description "Print out paths to all files with a corresponding .*.swp file"
+    f '\.swp' | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
 end
