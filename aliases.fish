@@ -92,7 +92,9 @@ end
 
 function trash \
   --description "Simple imitation of trash-cli"
-    map __trash $argv
+    for item in $argv
+        __trash $item
+    end
 end
 
 function __trash --argument-names item __trash_base_dir \
@@ -786,6 +788,9 @@ function xcape \
     ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'
     # For vim happiness
     ~/apps/xcape/xcape -e 'Control_L=Escape'
+    # For fast parens
+    ~/apps/xcape/xcape -e 'Shift_L=Shift_L|9'
+    ~/apps/xcape/xcape -e 'Shift_R=Shift_R|0'
 end
 
 function downpour_mp3_rename
