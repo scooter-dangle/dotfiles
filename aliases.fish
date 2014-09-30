@@ -469,7 +469,11 @@ function up
 end
 
 function bk
-    cd -
+    prevd $argv
+end
+
+function fd
+    nextd $argv
 end
 
 function hm
@@ -588,8 +592,8 @@ function s \
 end
 
 function ta --argument idx \
-  --description "Shortcut for commonly used awk functionality"
-    awk '{print $'$idx'}'
+  --description "Shortcut for commonly used cut functionality"
+  cut -d ' ' -f $idx
 end
 
 function sf \
@@ -844,22 +848,29 @@ function gmd --argument scope \
         set scope --local
     end
 
-    if begin; == $scope --local; or == $scope -l; end
+    if contains -- $scope --local -l
         # for bundled gems
         bundle list \
         | tr -d '*(,)' \
         | awk '{print $1, "--version", $2}' \
         | xargs -n3 gem rdoc --ri --no-rdoc
-    else if begin; == $scope --global; or == $scope -g; end
+        return 0
+    else if contains -- $scope --global -g
         # global gems
         gem list \
         | tr -d '(,)' \
         | awk '{print $1, "--version", $2}' \
         | xargs -n3 gem rdoc --ri --no-rdoc
+        return 0
     else
         echo "Unknown option:\t$scope"
         return 1
     end
+end
+
+function rl \
+  --description "Load up rvm"
+    rvm reload > /dev/null; and cd .
 end
 
 function rtags \
@@ -867,7 +878,14 @@ function rtags \
     if which rvm > /dev/null
         set gemdir (rvm gemset dir)
     end
+
+    echo 'Generating ctags...'
     ctags -R . $gemdir
+
+    echo 'Generating ri-tags...'
+    gmd --local
+
+    return 0
 end
 
 function skiq \
@@ -877,5 +895,6 @@ end
 
 function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
-    f '\.swp' | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
+    f '\.swp' \
+    | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
 end
