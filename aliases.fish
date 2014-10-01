@@ -9,8 +9,8 @@ end
 
 # Further tip from B'More on Rails Meetup that was also
 # the source of the preceding tip
-function ag --argument-names target \
-  --description "Aliases Grep"
+function ga --argument-names target \
+  --description "Grep Aliases"
     if test (grep -l "function "$target $aliases)
         set target "function "$target
     end
@@ -587,8 +587,14 @@ end
 
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    grep $argv -RIin . | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2 /'
-    or echo $argv[1] not found
+    search_remember _s $argv
+end
+
+function _s
+    # NOTE last line chomps './' prefix off of filenames
+    grep $argv -RIin . \
+    | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2 /' \
+    | sed 's/..//'
 end
 
 function ta --argument idx \
@@ -614,7 +620,7 @@ end
 function l \
   --description "Grab a particular line from file or pipe" \
   --argument-names target
-    paj 1 $target
+    sed (+ $target '-1')"p"
 end
 
 function paj \
@@ -773,8 +779,120 @@ end
 
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
+    search_remember _f $argv
+end
+
+function _f
     find . $argv[1] ^ /dev/null \
     | grep -i $argv[1]"[^/]*\$"
+end
+
+function search_remember
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+    set --local vim_open_search_cmd vs
+    set --local search_term $argv[2]
+
+    set --local tmpfile (mktemp --suffix _last_searched_files)
+    set --local tmpfile2 (mktemp --suffix _last_searched_files_buffer)
+
+    eval $argv | tee $tmpfile2 | numberer 1 | grep $search_term --color
+
+    if test -s $tmpfile2
+        set --local counter 0
+        set --local element (date | md5sum | ta 1)
+        for line in (cat $tmpfile2)
+            if ≤ $counter $SEARCH_OPEN_LIMIT
+                set --local new_element (echo $line | ta 1)
+                if != $element $new_element
+                    set element $new_element
+                    set counter (+ $counter 1)
+                    echo $line >> $tmpfile
+                end
+            end
+        end
+
+        set --global LAST_SEARCH_TERM $search_term
+        if begin
+            set --query LAST_SEARCHED_FILES
+            and test -f $LAST_SEARCHED_FILES
+        end
+            rm $LAST_SEARCHED_FILES
+        end
+
+        set --global LAST_SEARCHED_FILES $tmpfile
+    end
+end
+
+function _gen_vs_completions --on-variable LAST_SEARCHED_FILES
+    complete --command vs --erase
+    set --local counterer 0
+    for match in (cat $LAST_SEARCHED_FILES)
+        set counterer (+ $counterer 1)
+        complete --command vs --condition test_for_has_searched --argument $counterer --description "$match" --no-files --authoritative
+    end
+end
+
+function numberer --argument idx
+    set counter 1
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+    set counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' '-')
+    set element (date | md5sum | ta 1)
+    while read line
+        set new_element (echo $line | ta $idx)
+        if ≤ $counter $SEARCH_OPEN_LIMIT
+            if != $element $new_element
+                echo (printf '%-'$counter_padded_size'i'  $counter) $line
+                set element $new_element
+                set counter (+ $counter 1)
+            else
+                echo (echo $counter | tr '0123456789' ' ') $line
+            end
+        else
+            echo $counter_finished $line
+        end
+    end
+end
+
+function get_lines
+    if == 1 (count $argv)
+        sed --quiet ''$argv[1]'p'
+    else
+        set --local get_lines_file (mktemp --suffix _get_lines_helper)
+
+        while read line
+            echo $line >> $get_lines_file
+        end
+
+        for specifier in $argv
+            cat $get_lines_file | sed --quiet ''$specifier'p'
+        end
+        rm $get_lines_file
+    end
+end
+
+function test_for_has_searched
+    set --query LAST_SEARCH_TERM
+end
+
+function recently_searched_files
+    if not set --query LAST_SEARCHED_FILES
+        echo \n
+    end
+    cat $LAST_SEARCHED_FILES | ta 1 | uniq
+end
+
+function vs
+    if == 0 (count $argv)
+        set files (recently_searched_files)
+    else
+        set files (recently_searched_files | get_lines $argv)
+    end
+    vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
 end
 
 function blerg --argument-names the_royal_nergin
@@ -882,8 +1000,10 @@ function rtags \
     echo 'Generating ctags...'
     ctags -R . $gemdir
 
-    echo 'Generating ri-tags...'
-    gmd --local
+    # Disabling for now due to so slow...need to cache
+    # or something
+    # echo 'Generating ri-tags...'
+    # gmd --local
 
     return 0
 end
