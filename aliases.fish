@@ -520,6 +520,10 @@ function rsh
     pry --require rake
 end
 
+function in_git_repo
+    gs ^ /dev/null
+end
+
 function gs
     git status -s $argv
 end
@@ -587,14 +591,11 @@ end
 
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    search_remember _s $argv
+    search_remember $argv
 end
 
 function _s
-    # NOTE last line chomps './' prefix off of filenames
-    grep $argv -RIin . \
-    | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2 /' \
-    | sed 's/..//'
+    ag $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/'
 end
 
 function ta --argument idx \
@@ -779,7 +780,7 @@ end
 
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
-    search_remember _f $argv
+    search_remember $argv
 end
 
 function _f
@@ -791,28 +792,19 @@ function search_remember
     if not set --query SEARCH_OPEN_LIMIT
         set SEARCH_OPEN_LIMIT 20
     end
-    set --local vim_open_search_cmd vs
-    set --local search_term $argv[2]
+    set --local search_term $argv[1]
 
     set --local tmpfile (mktemp --suffix _last_searched_files)
-    set --local tmpfile2 (mktemp --suffix _last_searched_files_buffer)
 
-    eval $argv | tee $tmpfile2 | numberer 1 | grep $search_term --color
+    if == $_ s
+        ag --{color,head,break,group} --context=1 --before=1 $argv | numberer
+        ag --max-count 1 --silent $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    else if == $_ f
+        ag --color -g $argv | numberer_simple
+        ag -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    end
 
-    if test -s $tmpfile2
-        set --local counter 0
-        set --local element (date | md5sum | ta 1)
-        for line in (cat $tmpfile2)
-            if ≤ $counter $SEARCH_OPEN_LIMIT
-                set --local new_element (echo $line | ta 1)
-                if != $element $new_element
-                    set element $new_element
-                    set counter (+ $counter 1)
-                    echo $line >> $tmpfile
-                end
-            end
-        end
-
+    if test -s $tmpfile
         set --global LAST_SEARCH_TERM $search_term
         if begin
             set --query LAST_SEARCHED_FILES
@@ -822,39 +814,88 @@ function search_remember
         end
 
         set --global LAST_SEARCHED_FILES $tmpfile
+
+        if == $_ s
+            _gen_vs_completions
+        else if == $_ f
+            _gen_vf_completions
+        end
     end
 end
 
-function _gen_vs_completions --on-variable LAST_SEARCHED_FILES
+function _gen_vs_completions
     complete --command vs --erase
-    set --local counterer 0
+    complete --command vf --erase
+    set --local counterer 1
     for match in (cat $LAST_SEARCHED_FILES)
-        set counterer (+ $counterer 1)
-        complete --command vs --condition test_for_has_searched --argument $counterer --description "$match" --no-files --authoritative
+        complete --command vs --condition test_for_has_searched --argument $counterer --description ''$match'' --no-files --authoritative
+        set counterer (++ $counterer)
     end
 end
 
-function numberer --argument idx
-    set counter 1
+function _gen_vf_completions
+    complete --command vs --erase
+    complete --command vf --erase
+    for file in (cat $LAST_SEARCHED_FILES)
+        complete --command vf --condition test_for_has_searched --argument $file --description (basename $file) --no-files --authoritative
+    end
+end
+
+function numberer_simple
     if not set --query SEARCH_OPEN_LIMIT
         set SEARCH_OPEN_LIMIT 20
     end
-    set counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
-    set counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' '-')
-    set element (date | md5sum | ta 1)
+
+    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+
+    set --local counter 1
+
     while read line
-        set new_element (echo $line | ta $idx)
         if ≤ $counter $SEARCH_OPEN_LIMIT
-            if != $element $new_element
-                echo (printf '%-'$counter_padded_size'i'  $counter) $line
-                set element $new_element
-                set counter (+ $counter 1)
+            set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+            set counter (++ $counter)
+        else
+            set counter_string "$counter_finished "
+        end
+        echo $counter_string$line
+    end
+end
+
+function numberer
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+
+    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+
+    set --local blank true
+    set --local counter 1
+
+    while read line
+        if ≤ $counter $SEARCH_OPEN_LIMIT
+            if eval $blank
+                if not test -z $line
+                    set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+                    set counter (++ $counter)
+                    set blank false
+                end
             else
-                echo (echo $counter | tr '0123456789' ' ') $line
+                if not test -z $line
+                    set counter_string "$counter_finished "
+                else
+                    set blank true
+                end
             end
         else
-            echo $counter_finished $line
+            if not test -z $line
+                set counter_string "$counter_finished "
+            else
+                set counter_string ''
+            end
         end
+        echo $counter_string$line
     end
 end
 
@@ -893,6 +934,11 @@ function vs
         set files (recently_searched_files | get_lines $argv)
     end
     vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+# why not include both vs and vf? vs for select and vf for file?
+function vf
+    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
 end
 
 function blerg --argument-names the_royal_nergin
