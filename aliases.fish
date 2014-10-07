@@ -9,8 +9,8 @@ end
 
 # Further tip from B'More on Rails Meetup that was also
 # the source of the preceding tip
-function ag --argument-names target \
-  --description "Aliases Grep"
+function ga --argument-names target \
+  --description "Grep Aliases"
     if test (grep -l "function "$target $aliases)
         set target "function "$target
     end
@@ -469,7 +469,11 @@ function up
 end
 
 function bk
-    cd -
+    prevd $argv
+end
+
+function fd
+    nextd $argv
 end
 
 function hm
@@ -514,6 +518,10 @@ end
 
 function rsh
     pry --require rake
+end
+
+function in_git_repo
+    gs ^ /dev/null
 end
 
 function gs
@@ -581,15 +589,53 @@ function pp
     pygmentize $argv
 end
 
+# Note: Largely from
+# http://robots.thoughtbot.com/silver-searcher-tab-completion-with-exuberant-ctags
+function __s_complete_gen
+    cut --fields 1 local.tags ^/dev/null \
+    | grep --invert-match '!_TAG' \
+    | uniq
+end
+
+function __s_complete_test
+    test -e local.tags
+end
+
+function __s_cleanup --argument-names dir_hash suffix
+    for stale_file in (ls /tmp/ | grep $dir_hash)
+        rm /tmp/$stale_file
+    end
+end
+
+function __s_complete
+    set dir_hash (readlink --canonicalize local.tags | md5sum | ta 1)
+    set stat_hash (stat --format '%z' local.tags | md5sum | ta 1)
+    set suffix tag_search_completion
+    set filename "/tmp/$dir_hash.$stat_hash.$suffix"
+
+    if test -e $filename
+        cat $filename
+        return 0
+    end
+
+    __s_cleanup $dir_hash $suffix
+
+    __s_complete_gen | tee $filename
+end
+
+complete --command s --exclusive --condition "__s_complete_test" --arguments "(__s_complete)" --authoritative
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    grep $argv -RIin . | sed --regexp-extended 's/^(.+):([0-9]+):/\1 \2 /'
-    or echo $argv[1] not found
+    search_remember $argv
+end
+
+function _s
+    ag $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/'
 end
 
 function ta --argument idx \
-  --description "Shortcut for commonly used awk functionality"
-    awk '{print $'$idx'}'
+  --description "Shortcut for commonly used cut functionality"
+  cut -d ' ' -f $idx
 end
 
 function sf \
@@ -610,7 +656,7 @@ end
 function l \
   --description "Grab a particular line from file or pipe" \
   --argument-names target
-    paj 1 $target
+    sed (+ $target '-1')"p"
 end
 
 function paj \
@@ -769,8 +815,206 @@ end
 
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
+    search_remember $argv
+end
+
+function _f
     find . $argv[1] ^ /dev/null \
     | grep -i $argv[1]"[^/]*\$"
+end
+
+function search_remember
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+    set --local search_term $argv[1]
+
+    set --local tmpfile (mktemp --suffix _last_searched_files)
+
+    if == $_ s
+        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --smart-case --skip-vcs-ignores --silent
+        ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
+        ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    else if == $_ f
+        ag --color --skip-vcs-ignores -g $argv | numberer_simple
+        ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    end
+
+    if test -s $tmpfile
+        set --global LAST_SEARCH_TERM $search_term
+        if begin
+            set --query LAST_SEARCHED_FILES
+            and test -f $LAST_SEARCHED_FILES
+        end
+            rm $LAST_SEARCHED_FILES
+        end
+
+        set --global LAST_SEARCHED_FILES $tmpfile
+
+        _gen_vs_completions
+        _gen_vf_completions
+    end
+end
+
+function __vs_complete_allows --argument-names target element
+    if == $target $element
+        return (false)
+    end
+
+    if begin; echo $target | grep --quiet ,; end
+        set --local lower (echo $target | cut --fields 1 --delimiter ',')
+        set --local upper (echo $target | cut --fields 2 --delimiter ',')
+
+        if == $lower '.'
+            set lower 0
+        end
+
+        if == $upper \\\$
+            set upper (++ $element)
+        end
+
+        if begin; echo $upper | grep --quiet +; end
+            set --local tmp_upper (echo $upper | cut --fields 2 --delimiter +)
+            if test -z $tmp_upper
+                set tmp_upper 0
+            end
+            set upper (+ $lower $tmp_upper)
+        end
+
+        if begin; ≥ $element $lower; and ≤ $element $upper; end
+            return (false)
+        end
+    end
+
+    return (true)
+end
+
+function __vs_complete_arg_filter_gen --argument-names counter
+    . (echo 'function __vs_complete_arg_filter_'$counter'; set current_args (__fish_print_cmd_args) ; if ≥ (count $current_args) 2 ; for arg in $current_args[2..-1] ; if not __vs_complete_allows $arg '$counter' ; return (false) ; end ; end ; end ; return (true) ; end' | psub)
+    echo __vs_complete_arg_filter_$counter
+end
+
+function __vf_complete_arg_filter_gen --argument-names counter path
+    . (echo 'function __vf_complete_arg_filter_'$counter'; if contains "'$path'" (__fish_print_cmd_args | sed "s/^vf //"); return (false); else; return (true); end; end' | psub)
+    echo __vf_complete_arg_filter_$counter
+end
+
+function vs
+    if == 0 (count $argv)
+        set files (recently_searched_files)
+    else
+        set files (recently_searched_files | get_lines $argv)
+    end
+    vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+# why not include both vs and vf? vs for select and vf for file?
+function vf
+    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+function _gen_vs_completions
+    complete --command vs --erase
+    set --local counterer 1
+    for match in (cat $LAST_SEARCHED_FILES)
+        complete --command vs --condition (__vs_complete_arg_filter_gen $counterer) --argument $counterer --description ''$match'' --no-files --authoritative
+        set counterer (++ $counterer)
+    end
+end
+
+function _gen_vf_completions
+    complete --command vf --erase
+    set --local counterer 1
+    for file in (cat $LAST_SEARCHED_FILES | ta 1)
+        complete --command vf --condition (__vf_complete_arg_filter_gen $counterer $file) --argument $file --description (basename $file) --no-files --authoritative
+        set counterer (++ $counterer)
+    end
+end
+
+function numberer_simple
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+
+    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+
+    set --local counter 1
+
+    while read line
+        if ≤ $counter $SEARCH_OPEN_LIMIT
+            set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+            set counter (++ $counter)
+        else
+            set counter_string "$counter_finished "
+        end
+        echo $counter_string$line
+    end
+end
+
+function numberer
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 20
+    end
+
+    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+
+    set --local blank true
+    set --local counter 1
+
+    while read line
+        if ≤ $counter $SEARCH_OPEN_LIMIT
+            if eval $blank
+                if not test -z $line
+                    set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+                    set counter (++ $counter)
+                    set blank false
+                end
+            else
+                if not test -z $line
+                    set counter_string "$counter_finished "
+                else
+                    set blank true
+                end
+            end
+        else
+            if not test -z $line
+                set counter_string "$counter_finished "
+            else
+                set counter_string ''
+            end
+        end
+        echo $counter_string$line
+    end
+end
+
+function get_lines
+    if == 1 (count $argv)
+        sed --quiet ''$argv[1]'p'
+    else
+        set --local get_lines_file (mktemp --suffix _get_lines_helper)
+
+        while read line
+            echo $line >> $get_lines_file
+        end
+
+        for specifier in $argv
+            cat $get_lines_file | sed --quiet ''$specifier'p'
+        end
+        rm $get_lines_file
+    end
+end
+
+function test_for_has_searched
+    set --query LAST_SEARCH_TERM
+end
+
+function recently_searched_files
+    if not set --query LAST_SEARCHED_FILES
+        echo \n
+    end
+    cat $LAST_SEARCHED_FILES | ta 1 | uniq
 end
 
 function blerg --argument-names the_royal_nergin
@@ -844,22 +1088,29 @@ function gmd --argument scope \
         set scope --local
     end
 
-    if begin; == $scope --local; or == $scope -l; end
+    if contains -- $scope --local -l
         # for bundled gems
         bundle list \
         | tr -d '*(,)' \
         | awk '{print $1, "--version", $2}' \
         | xargs -n3 gem rdoc --ri --no-rdoc
-    else if begin; == $scope --global; or == $scope -g; end
+        return 0
+    else if contains -- $scope --global -g
         # global gems
         gem list \
         | tr -d '(,)' \
         | awk '{print $1, "--version", $2}' \
         | xargs -n3 gem rdoc --ri --no-rdoc
+        return 0
     else
         echo "Unknown option:\t$scope"
         return 1
     end
+end
+
+function rl \
+  --description "Load up rvm"
+    rvm reload > /dev/null; and cd .
 end
 
 function rtags \
@@ -867,7 +1118,29 @@ function rtags \
     if which rvm > /dev/null
         set gemdir (rvm gemset dir)
     end
-    ctags -R . $gemdir
+
+    echo 'Generating combined gem ctags...'
+    ctags -R --exclude=doc{,s} --exclude=\*.tags . $gemdir
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=.tags .
+
+    # So hacky  :(
+    # Can't figure out how to tell rdoc to use a different file
+    mv tags .global.tags
+
+    echo 'Generating local ctags...'
+    ctags -R --exclude=doc{,s} --exclude=\*.tags .
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --force-update --exclude=.tags .
+
+    # completion of gross hack
+    mv tags local.tags
+    mv .global.tags tags
+
+    # Disabling for now due to so slow...need to cache
+    # or something
+    # echo 'Generating ri-tags...'
+    # gmd --local
+
+    return 0
 end
 
 function skiq \
@@ -877,5 +1150,6 @@ end
 
 function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
-    f '\.swp' | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
+    f '\.swp' \
+    | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
 end
