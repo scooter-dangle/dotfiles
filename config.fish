@@ -22,7 +22,7 @@ set -x PATH $GOBIN $PATH
 
 set -x PATH $HOME/.luarocks/bin $PATH
 
-set --export SEARCH_OPEN_LIMIT 10
+set --export SEARCH_OPEN_LIMIT 15
 
 if which brew > /dev/null
   set -x PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
@@ -241,4 +241,3 @@ end
 # the following to ~/.config/fish/config.fish:
 
 status --is-interactive; and which rbenv > /dev/null; and . (rbenv init -|psub)
-
