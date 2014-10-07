@@ -589,6 +589,41 @@ function pp
     pygmentize $argv
 end
 
+# Note: Largely from
+# http://robots.thoughtbot.com/silver-searcher-tab-completion-with-exuberant-ctags
+function __s_complete_gen
+    cut --fields 1 local.tags ^/dev/null \
+    | grep --invert-match '!_TAG' \
+    | uniq
+end
+
+function __s_complete_test
+    test -e local.tags
+end
+
+function __s_cleanup --argument-names dir_hash suffix
+    for stale_file in (ls /tmp/ | grep $dir_hash)
+        rm /tmp/$stale_file
+    end
+end
+
+function __s_complete
+    set dir_hash (readlink --canonicalize local.tags | md5sum | ta 1)
+    set stat_hash (stat --format '%z' local.tags | md5sum | ta 1)
+    set suffix tag_search_completion
+    set filename "/tmp/$dir_hash.$stat_hash.$suffix"
+
+    if test -e $filename
+        cat $filename
+        return 0
+    end
+
+    __s_cleanup $dir_hash $suffix
+
+    __s_complete_gen | tee $filename
+end
+
+complete --command s --exclusive --condition "__s_complete_test" --arguments "(__s_complete)" --authoritative
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
     search_remember $argv
@@ -797,11 +832,12 @@ function search_remember
     set --local tmpfile (mktemp --suffix _last_searched_files)
 
     if == $_ s
-        ag --{color,head,break,group} --context=1 --before=1 $argv | numberer
-        ag --max-count 1 --silent $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --smart-case --skip-vcs-ignores --silent
+        ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
+        ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
     else if == $_ f
-        ag --color -g $argv | numberer_simple
-        ag -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+        ag --color --skip-vcs-ignores -g $argv | numberer_simple
+        ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
     end
 
     if test -s $tmpfile
@@ -815,29 +851,83 @@ function search_remember
 
         set --global LAST_SEARCHED_FILES $tmpfile
 
-        if == $_ s
-            _gen_vs_completions
-        else if == $_ f
-            _gen_vf_completions
+        _gen_vs_completions
+        _gen_vf_completions
+    end
+end
+
+function __vs_complete_allows --argument-names target element
+    if == $target $element
+        return (false)
+    end
+
+    if begin; echo $target | grep --quiet ,; end
+        set --local lower (echo $target | cut --fields 1 --delimiter ',')
+        set --local upper (echo $target | cut --fields 2 --delimiter ',')
+
+        if == $lower '.'
+            set lower 0
+        end
+
+        if == $upper \\\$
+            set upper (++ $element)
+        end
+
+        if begin; echo $upper | grep --quiet +; end
+            set --local tmp_upper (echo $upper | cut --fields 2 --delimiter +)
+            if test -z $tmp_upper
+                set tmp_upper 0
+            end
+            set upper (+ $lower $tmp_upper)
+        end
+
+        if begin; ≥ $element $lower; and ≤ $element $upper; end
+            return (false)
         end
     end
+
+    return (true)
+end
+
+function __vs_complete_arg_filter_gen --argument-names counter
+    . (echo 'function __vs_complete_arg_filter_'$counter'; set current_args (__fish_print_cmd_args) ; if ≥ (count $current_args) 2 ; for arg in $current_args[2..-1] ; if not __vs_complete_allows $arg '$counter' ; return (false) ; end ; end ; end ; return (true) ; end' | psub)
+    echo __vs_complete_arg_filter_$counter
+end
+
+function __vf_complete_arg_filter_gen --argument-names counter path
+    . (echo 'function __vf_complete_arg_filter_'$counter'; if contains "'$path'" (__fish_print_cmd_args | sed "s/^vf //"); return (false); else; return (true); end; end' | psub)
+    echo __vf_complete_arg_filter_$counter
+end
+
+function vs
+    if == 0 (count $argv)
+        set files (recently_searched_files)
+    else
+        set files (recently_searched_files | get_lines $argv)
+    end
+    vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+# why not include both vs and vf? vs for select and vf for file?
+function vf
+    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
 end
 
 function _gen_vs_completions
     complete --command vs --erase
-    complete --command vf --erase
     set --local counterer 1
     for match in (cat $LAST_SEARCHED_FILES)
-        complete --command vs --condition test_for_has_searched --argument $counterer --description ''$match'' --no-files --authoritative
+        complete --command vs --condition (__vs_complete_arg_filter_gen $counterer) --argument $counterer --description ''$match'' --no-files --authoritative
         set counterer (++ $counterer)
     end
 end
 
 function _gen_vf_completions
-    complete --command vs --erase
     complete --command vf --erase
-    for file in (cat $LAST_SEARCHED_FILES)
-        complete --command vf --condition test_for_has_searched --argument $file --description (basename $file) --no-files --authoritative
+    set --local counterer 1
+    for file in (cat $LAST_SEARCHED_FILES | ta 1)
+        complete --command vf --condition (__vf_complete_arg_filter_gen $counterer $file) --argument $file --description (basename $file) --no-files --authoritative
+        set counterer (++ $counterer)
     end
 end
 
@@ -925,20 +1015,6 @@ function recently_searched_files
         echo \n
     end
     cat $LAST_SEARCHED_FILES | ta 1 | uniq
-end
-
-function vs
-    if == 0 (count $argv)
-        set files (recently_searched_files)
-    else
-        set files (recently_searched_files | get_lines $argv)
-    end
-    vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
-end
-
-# why not include both vs and vf? vs for select and vf for file?
-function vf
-    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
 end
 
 function blerg --argument-names the_royal_nergin
@@ -1043,8 +1119,21 @@ function rtags \
         set gemdir (rvm gemset dir)
     end
 
-    echo 'Generating ctags...'
-    ctags -R . $gemdir
+    echo 'Generating combined gem ctags...'
+    ctags -R --exclude=doc{,s} --exclude=\*.tags . $gemdir
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=.tags .
+
+    # So hacky  :(
+    # Can't figure out how to tell rdoc to use a different file
+    mv tags .global.tags
+
+    echo 'Generating local ctags...'
+    ctags -R --exclude=doc{,s} --exclude=\*.tags .
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --force-update --exclude=.tags .
+
+    # completion of gross hack
+    mv tags local.tags
+    mv .global.tags tags
 
     # Disabling for now due to so slow...need to cache
     # or something
