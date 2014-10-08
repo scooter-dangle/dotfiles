@@ -813,6 +813,7 @@ function img \
     cd $current_dir
 end
 
+complete --command f --arguments  "(ag -g '.*'  | tr '/.' \"\n\" | sort --unique)" --exclusive --authoritative
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
     search_remember $argv
@@ -856,6 +857,12 @@ function search_remember
     end
 end
 
+# Trouble getting the following to work when using dollar
+# sign to indicate end of range
+# function __vs_complete_allows --argument-names target element
+#     set target (echo "$target" | sed --regexp-extended 's/\$/$/g')
+#     not contains $element (seq $element | sed --quiet "$target p")
+# end
 function __vs_complete_allows --argument-names target element
     if == $target $element
         return (false)
