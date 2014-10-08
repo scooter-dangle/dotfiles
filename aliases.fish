@@ -1065,14 +1065,39 @@ function downpour_all --argument-names book
     mv $book_name ~/Audiobooks/
 end
 
-function default_tmux
-    echo "rename-session temp_session
-          new-session -smusic mocp
-          new-window -c~ -tmusic -d
-          new-window -c~ -tmusic -d
-          kill-session -ttemp_session" \
-    | tmux -2 -q -C
-    tmux -2 attach
+# function default_tmux
+#     echo "rename-session temp_session
+#           new-session -smusic mocp
+#           new-window -c~ -tmusic -d
+#           new-window -c~ -tmusic -d
+#           kill-session -ttemp_session" \
+#     | tmux -2 -q -C
+#     tmux -2 attach
+# end
+
+function open_bot_windows
+    tmux new-window -c ~/codes/queue-bot
+    tmux split-window -h -c ~/codes/parse-bot
+    tmux split-window -v -c ~/codes/reporting-bot
+    tmux select-pane -L
+    tmux split-window -v -c ~/codes/summary-bot
+    tmux select-pane -U
+    tmux set-option synchronize-panes on
+end
+
+function all_bots_skiq --argument-names do_git_update
+    open_bot_windows
+    if begin; != 0 (count $argv); and contains -- $do_git_update -g --git-update; end
+        tmux send-keys g p Enter
+        tmux send-keys b u n d l e Enter
+    end
+    tmux send-keys s k i q Enter
+end
+
+function bot_pipeline
+    open_bot_windows
+    tmux send-keys t a i l Space '-' '-' f o l l o w Space l o g '/' '*' '-'  b o t '.' l o g Enter
+    all_bots_skiq $argv
 end
 
 if which foreman > /dev/null
@@ -1153,6 +1178,12 @@ end
 function skiq \
   --description "Startup sidekiq worker"
     rerun --background --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
+end
+
+function on \
+  --description "workingon.co"
+    begin; curl -X POST --data-urlencode "task=$argv" 'https://api.workingon.co/hooks/incoming?token=3709831af09b9771ae906c601efafbcffefc45039fb1a4e5d9664dda279f654b' ^&1; end > /dev/null
+    echo "Task ($argv) sent."
 end
 
 function swp_all \
