@@ -9,9 +9,15 @@ end
 
 # Further tip from B'More on Rails Meetup that was also
 # the source of the preceding tip
-function ga --argument-names target \
+complete --command ga --arguments '(functions --names)' --authoritative --exclusive
+function ga \
   --description "Grep Aliases"
-    if test (grep -l "function "$target $aliases)
+    functions $argv | pygmentize -l bash
+end
+
+function ga_old --argument target \
+  --description 'Grep Aliases'
+	if test (grep -l "function "$target $aliases)
         set target "function "$target
     end
     set matching_lines (line_number_matches $target $aliases)
@@ -87,7 +93,7 @@ function floor \
 end
 
 function digit_padding_width
-    ++ (floor (log (count $argv)))
+    amath "length("(count $argv)")"
 end
 
 function trash \
@@ -524,6 +530,13 @@ function in_git_repo
     gs ^ /dev/null
 end
 
+function git-recent \
+  --description "Show recent activity by on all branches"
+    # From
+    # http://stackoverflow.com/questions/11135052/how-to-list-only-active-recently-changed-branches-in-git
+    reverse ( git for-each-ref --sort=-committerdate --format='%(committerdate:short) %(refname)' refs/heads refs/remotes )
+end
+
 function gs
     git status -s $argv
 end
@@ -576,13 +589,6 @@ function ghcd \
   --argument-names user repo
     git clone "https://github.com/$user/$repo.git"
     and cd $repo
-end
-
-function vimp \
-  --description "Run vim with project.vim enabled"
-    # Note: Requires project.vim as well as code in vimrc to look
-    # for bundle_project_dot_vim variable
-    vim --cmd "let bundle_project_dot_vim = 1" $argv
 end
 
 function pp
@@ -640,23 +646,18 @@ end
 
 function sf \
   --description "Print out filenames where pattern occurs"
-    s $argv | ta 1
+    s $argv | ta 3 | sort --unique
 end
 
 function vsf \
   --description 'Because vim (sf $argv) takes too long'
-    vim (sf $argv) +/$argv
-end
-
-function vpsf \
-  --description 'Because vimp (sf $argv) takes too long'
-    vimp (sf $argv) +/$argv
+    vim (sf $argv) +/$argv[1]
 end
 
 function l \
   --description "Grab a particular line from file or pipe" \
   --argument-names target
-    sed (+ $target '-1')"p"
+    sed (+ $target '-1')"p" --quiet
 end
 
 function paj \
@@ -679,12 +680,6 @@ function psfind \
     ps -A \
     | grep $argv \
     | grep grep --invert-match
-end
-
-function justpid \
-  --description "Extracts pid from psfind"
-    # Unnecessary, but I can't remember the right way to do it
-    sed --regexp-extended 's/^\s*([0-9]+)\s+.*$/\1/g'
 end
 
 function phpdoc_gen \
@@ -835,12 +830,27 @@ function search_remember
     if == $_ s
         set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --smart-case --skip-vcs-ignores --silent
         ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
-        ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+        __search_remember_completer_s $argv &
     else if == $_ f
         ag --color --skip-vcs-ignores -g $argv | numberer_simple
-        ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+        __search_remember_completer_f $argv &
     end
+end
 
+function __search_remember_completer_s \
+  --no-scope-shadowing
+    ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    __search_remember_close_out &
+end
+
+function __search_remember_completer_f \
+  --no-scope-shadowing
+    ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    __search_remember_close_out &
+end
+
+function __search_remember_close_out \
+  --no-scope-shadowing
     if test -s $tmpfile
         set --global LAST_SEARCH_TERM $search_term
         if begin
@@ -943,7 +953,7 @@ function numberer_simple
         set SEARCH_OPEN_LIMIT 20
     end
 
-    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
     set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
 
     set --local counter 1
@@ -964,7 +974,7 @@ function numberer
         set SEARCH_OPEN_LIMIT 20
     end
 
-    set --local counter_padded_size (++ (floor (log $SEARCH_OPEN_LIMIT)))
+    set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
     set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
 
     set --local blank true
@@ -1076,11 +1086,12 @@ end
 # end
 
 function open_bot_windows
-    tmux new-window -c ~/codes/queue-bot
-    tmux split-window -h -c ~/codes/parse-bot
-    tmux split-window -v -c ~/codes/reporting-bot
+    set --local teh_bots ~/codes/bots
+    tmux new-window -c $teh_bots/queue-bot
+    tmux split-window -h -c $teh_bots/parse-bot
+    tmux split-window -v -c $teh_bots/reporting-bot
     tmux select-pane -L
-    tmux split-window -v -c ~/codes/summary-bot
+    tmux split-window -v -c $teh_bots/summary-bot
     tmux select-pane -U
     tmux set-option synchronize-panes on
 end
@@ -1100,16 +1111,14 @@ function bot_pipeline
     all_bots_skiq $argv
 end
 
-if which foreman > /dev/null
-    function fancy_foreman \
-      --description "foreman with RubyMine Ruby args"
-        # Attempt to mimic RubyMine foreman setup
-        # How to use tail came from coderwall.com/p/6qdp5a
-        ruby -e '$stdout.sync=true;$stderr.sync=true;load($0=ARGV.shift)' (which foreman) \
-            $argv \
-            --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail --follow '(pwd)'/log/development.log' | psub) | psub) \
-            --root=(pwd)
-    end
+function fancy_foreman \
+  --description "foreman with RubyMine Ruby args"
+    # Attempt to mimic RubyMine foreman setup
+    # How to use tail came from coderwall.com/p/6qdp5a
+    ruby -e '$stdout.sync=true;$stderr.sync=true;load($0=ARGV.shift)' (which foreman) \
+        $argv \
+        --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail --follow '(pwd)'/log/development.log' | psub) (echo \n'sidekiq: tail --follow '(pwd)'/log/sidekiq.log' | psub) | psub) \
+        --root=(pwd)
 end
 
 complete --command gmd --arguments '-{l,-local}' --description 'Generate docs for locally bundled gems'
@@ -1182,7 +1191,7 @@ end
 
 function on \
   --description "workingon.co"
-    begin; curl -X POST --data-urlencode "task=$argv" 'https://api.workingon.co/hooks/incoming?token=3709831af09b9771ae906c601efafbcffefc45039fb1a4e5d9664dda279f654b' ^&1; end > /dev/null
+    begin; curl -X POST --data-urlencode "task=$argv" 'https://api.workingon.co/hooks/incoming?token=b4ca138be6ad5d39f3cc1e0f537b2e4f9d887170170196634430e37f80a6fb78' ^&1; end > /dev/null
     echo "Task ($argv) sent."
 end
 
@@ -1190,4 +1199,36 @@ function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
     f '\.swp' \
     | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
+end
+
+function fish_debug \
+  --description "Run fish in debug mode and log stuff out to files and such"
+    set --local fish_logs /tmp/fish_logs
+    if not test -d $fish_logs
+        mkdir --parents $fish_logs
+    end
+
+    set --local fish_profiles /tmp/fish_profiles
+    if not test -d $fish_profiles
+        mkdir --parents $fish_profiles
+    end
+
+    set current_date (date +'%Y-%m-%d  %I:%M:%S.%3N %p')
+    set log_file $fish_logs/$current_date.log
+    set pro_file $fish_profiles/$current_date.profile
+
+    touch $log_file
+    touch $pro_file
+
+    fish --interactive --debug 3 --profile $pro_file ^$log_file
+end
+
+complete --command vim --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\' ^/dev/null)'
+# complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
+# complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
+
+if == (uname) Darwin
+    function postgres_start_server
+        launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
+    end
 end
