@@ -763,6 +763,7 @@ function podders \
     ruby update_auth.rb
     cd $current_dir
     hpodder download
+    marketplace_renamer
     evacuate_podders
 end
 
@@ -1159,4 +1160,19 @@ function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
     f '\.swp' \
     | sed --regexp-extended 's/\/\.(.+)\.swp$/\/\1/'
+end
+
+function marketplace_renamer
+    cd ~/podcasts/APM__Marketplace_All-In-One/
+    rename 's/^(.*)_(\d{8})/$2_$1/' *.mp3
+    rename 's/(\d{8})_(mmr)/$1_00_$2/' *.mp3
+    rename 's/(\d{8})_(midday)/$1_01_$2/' *.mp3
+    rename 's/(\d{8})_(tech)/$1_02_$2/' *.mp3
+    rename 's/(\d{8})_(pm)/$1_03_$2/' *.mp3
+    rename 's/(\d{8})_(weekend)/$1_04_$2/' *.mp3
+    bk
+end
+
+function less
+    command less --RAW-CONTROL-CHARS $argv
 end
