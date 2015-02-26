@@ -1,31 +1,39 @@
 status --is-interactive; and . ~/.config/fish/aliases.fish
 
-set -x NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
+if test -e ~/dotfiles/git-custom-commands
+  set --export PATH ~/dotfiles/git-custom-commands $PATH
+end
 
-set -x PATH ~/erlang/rebar $PATH
-set -x PATH ~/erlang/concrete $PATH
-set -x PATH ~/.cabal/bin $PATH
-set -x PATH ~/node_modules/.bin $PATH
-set -x PATH $HOME/.rbenv/bin $PATH
-set -x PATH $HOME/.rbenv/shims $PATH
-set -x PATH $HOME/ruby/mruby/bin $PATH
-set -x PATH $HOME/.topaz/bin $PATH
+set --export PATH $HOME/apps $PATH
 
-set -x GEM_HOME $HOME/.gems
-set -x PATH .bundle/bin $GEM_HOME/bin $PATH
+set --export PATH /usr/local/opt/coreutils/libexec/gnubin $PATH
+set --export PATH /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin $PATH
+# set --export NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
-set -x GOPATH $HOME/go
-set -x GOBIN $HOME/go/bin
-set -x PATH /usr/local/go/bin $PATH
+# set --export PATH ~/erlang/rebar $PATH
+# set --export PATH ~/erlang/concrete $PATH
+# set --export PATH ~/.cabal/bin $PATH
+# set --export PATH ~/node_modules/.bin $PATH
+# set --export PATH $HOME/.rbenv/bin $PATH
+# set --export PATH $HOME/.rbenv/shims $PATH
+# set --export PATH $HOME/ruby/mruby/bin $PATH
+# set --export PATH $HOME/.topaz/bin $PATH
 
-set -x PATH $GOBIN $PATH
+# set --export GEM_HOME $HOME/.gems
+# set --export PATH .bundle/bin $GEM_HOME/bin $PATH
 
-set -x PATH $HOME/.luarocks/bin $PATH
+set --export GOPATH $HOME/go
+set --export GOBIN $HOME/go/bin
+# set --export PATH /usr/local/go/bin $PATH
+
+set --export PATH $GOBIN $PATH
+
+# set --export PATH $HOME/.luarocks/bin $PATH
 
 set --export SEARCH_OPEN_LIMIT 15
 
 if which brew > /dev/null
-  set -x PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
+  set --export PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
 end
 
 if test -e ~/.rvm
@@ -66,7 +74,7 @@ if test -e ~/.rvm
     end
   end
 
-  # set -x PATH $HOME/.gems/bin $PATH
+  # set --export PATH $HOME/.gems/bin $PATH
   if begin
       not which rvm > /dev/null
       and ls -A | \
@@ -155,6 +163,7 @@ if test -e ~/.rvm
   # Hrm... not working yet.
   complete --command rvm --condition 'begin; == 2 (count (__fish_print_cmd_args_without_options)); and __fish_print_cmd_args_without_options | ta 2 | grep --regexp "usage|help" --silent; end' --exclusive --authoritative --arguments 'alt color updgrade-notes usage help version use reload implode get reset info current debug install uninstall remove reinstall migrate upgrade wrapper cleanup repair fix-permissions osx-ssl-certs snapshot alias disk-usage tools docs rvmrc patchset do cron gemset rubygems config-get gemdir fetch list autolibs pkg notes export unexport requirements mount user group'
 
+  __handle_rvmrc_stuff
 end
 
 # Vim mode doesn't feel ready yet :(
@@ -182,21 +191,21 @@ end
 
 # Can't get this to work
 #if test -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM
-#    set -x LESS_TERMCAP_mb '$\E[01;31m'       # begin blinking
-#    set -x LESS_TERMCAP_md '$\E[01;31m'       # begin bold
-#    set -x LESS_TERMCAP_me '$\E[0m'           # end mode
-#    set -x LESS_TERMCAP_se '$\E[0m'           # end standout-mode
-#    set -x LESS_TERMCAP_so '$\E[01;44m'       # begin standout-mode - info box
-#    set -x LESS_TERMCAP_ue '$\E[0m'           # end underline
-#    set -x LESS_TERMCAP_us '$\E[32m'          # begin underline
+#    set --export LESS_TERMCAP_mb '$\E[01;31m'       # begin blinking
+#    set --export LESS_TERMCAP_md '$\E[01;31m'       # begin bold
+#    set --export LESS_TERMCAP_me '$\E[0m'           # end mode
+#    set --export LESS_TERMCAP_se '$\E[0m'           # end standout-mode
+#    set --export LESS_TERMCAP_so '$\E[01;44m'       # begin standout-mode - info box
+#    set --export LESS_TERMCAP_ue '$\E[0m'           # end underline
+#    set --export LESS_TERMCAP_us '$\E[32m'          # begin underline
 #else
-#    set -x LESS_TERMCAP_mb '$\E[01;31m'       # begin blinking
-#    set -x LESS_TERMCAP_md '$\E[01;38;5;74m'  # begin bold
-#    set -x LESS_TERMCAP_me '$\E[0m'           # end mode
-#    set -x LESS_TERMCAP_se '$\E[0m'           # end standout-mode
-#    set -x LESS_TERMCAP_so '$\E[38;5;246m'    # begin standout-mode - info box
-#    set -x LESS_TERMCAP_ue '$\E[0m'           # end underline
-#    set -x LESS_TERMCAP_us '$\E[04;38;5;146m' # begin underline
+#    set --export LESS_TERMCAP_mb '$\E[01;31m'       # begin blinking
+#    set --export LESS_TERMCAP_md '$\E[01;38;5;74m'  # begin bold
+#    set --export LESS_TERMCAP_me '$\E[0m'           # end mode
+#    set --export LESS_TERMCAP_se '$\E[0m'           # end standout-mode
+#    set --export LESS_TERMCAP_so '$\E[38;5;246m'    # begin standout-mode - info box
+#    set --export LESS_TERMCAP_ue '$\E[0m'           # end underline
+#    set --export LESS_TERMCAP_us '$\E[04;38;5;146m' # begin underline
 #end
 
 # At least the following will work for manpages
@@ -205,23 +214,31 @@ function man
 end
 
 # tmux looks at $EDITOR to determine whether to use vi keys
-set -x EDITOR vi
+set --export EDITOR vi
 
 function bundle-bootstrap
     bundle install --binstubs=.bundle/bin path=.bundle/gems
 end
 
 # Rake completion helper
+# TODO - This shouldn't be is complicated.
 function test_for_rake
   begin
     test -f Rakefile
     or test -f rakefile
+    or test -f Rakefile.rb
+    or test -f rakefile.rb
   end
+end
+
+# TODO - fix-me-up
+function __rake_checksum
+  md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/'
 end
 
 # Rake completion helper
 function rake_args
-  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
+  set checksum (__rake_checksum)
   set task_full  /tmp/Rakefile.tasks.full.$checksum
   set task_names /tmp/Rakefile.tasks.names.$checksum
   set task_desc  /tmp/Rakefile.tasks.desc.$checksum

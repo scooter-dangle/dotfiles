@@ -1,8 +1,23 @@
-# vim
-.*.swp
-env.vim
-files.list
+# ctags (and custom rtags)
 /tags
+/local.tags
+.rdoc
+
 /.autotest
 /autotest
 
+# vim
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+*~
+env.vim
+files.list
+
+# OS S
+.DS_Store
+
+# frequent pry hack
+marshal.dump

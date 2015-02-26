@@ -9,7 +9,7 @@ end
 
 # Further tip from B'More on Rails Meetup that was also
 # the source of the preceding tip
-complete --command ga --arguments '(functions --names)' --authoritative --exclusive
+complete --command ga --arguments '(functions --all --names)' --authoritative --exclusive
 function ga \
   --description "Grep Aliases"
     functions $argv | pygmentize -l bash
@@ -554,7 +554,7 @@ function gb
 end
 
 function gp
-    git pull $argv
+    git pull --rebase $argv
 end
 
 function gf
@@ -829,7 +829,7 @@ function search_remember
     set --local tmpfile (mktemp --suffix _last_searched_files)
 
     if == $_ s
-        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --smart-case --skip-vcs-ignores --silent
+        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --ignore doc --smart-case --skip-vcs-ignores --silent
         ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
         __search_remember_completer_s $argv &
     else if == $_ f
@@ -1088,11 +1088,15 @@ end
 
 function open_bot_windows
     set --local teh_bots ~/codes/bots
-    tmux new-window -c $teh_bots/queue-bot
-    tmux split-window -h -c $teh_bots/parse-bot
-    tmux split-window -v -c $teh_bots/reporting-bot
+    tmux new-window -c $teh_bots/reporting-bot
+    tmux split-window -h -c $teh_bots/queue-bot
     tmux select-pane -L
     tmux split-window -v -c $teh_bots/summary-bot
+    tmux select-pane -R
+    tmux split-window -h -c $teh_bots/parse-bot
+    tmux split-window -v -c $teh_bots/retention-bot
+    tmux select-pane -L
+    tmux split-window -v -c $teh_bots/cleanup-bot
     tmux select-pane -U
     tmux set-option synchronize-panes on
 end
@@ -1155,6 +1159,11 @@ function rl \
     rvm reload > /dev/null; and cd .
 end
 
+# function rtags \
+#   --description "Generate ctags for a ruby project in a separate tmux session"
+#     set --export TMUX (tmux new-session -s "rtags "(basename (pwd)) -P -d -c "#{pane_current_path}" __rtags)
+# end
+
 function rtags \
   --description "Generate ctags for a ruby project"
     if which rvm > /dev/null
@@ -1187,13 +1196,7 @@ end
 
 function skiq \
   --description "Startup sidekiq worker"
-    rerun --background --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
-end
-
-function on \
-  --description "workingon.co"
-    begin; curl -X POST --data-urlencode "task=$argv" 'https://api.workingon.co/hooks/incoming?token=b4ca138be6ad5d39f3cc1e0f537b2e4f9d887170170196634430e37f80a6fb78' ^&1; end > /dev/null
-    echo "Task ($argv) sent."
+    rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
 end
 
 function swp_all \
@@ -1239,7 +1242,7 @@ function fish_debug \
     fish --interactive --debug 3 --profile $pro_file ^$log_file
 end
 
-complete --command vim --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\' ^/dev/null)'
+complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
 # complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
 # complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
 
@@ -1247,4 +1250,140 @@ if == (uname) Darwin
     function postgres_start_server
         launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
     end
+end
+
+for project in ~/codes/{prism,portal,api,database-migrations,automation-rlw} ~/codes/bots/* ~/go/src/github.com/distil/*
+    set --local project (echo $project | sed 's#/$##')
+    echo "function "(basename $project)"
+        cd $project
+    end" | source
+end
+
+function __psql_all_db_names
+    set --local hostname localhost
+    set --local username scott
+    psql --host $hostname --username $username --command "copy (select datname from pg_database where datistemplate = false) to stdout"
+end
+
+function __pcom_complete
+    # no-op
+    # if count (__fish_print_cmd_args)
+end
+
+complete --command pcom --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+function pcom --argument-names dbname
+    psql --host localhost --username scott --dbname $dbname --command $argv[2..-1]
+end
+
+complete --command pcoms --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+function pcoms --argument-names dbname
+    pcom $dbname "copy ($argv[2..-1]) to stdout with (format 'csv', header false, delimiter E'\t')"
+end
+
+complete --command pout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
+complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+function pout --argument-names dbname schema_table
+    pcoms $dbname "SELECT * FROM $schema_table"
+end
+
+complete --command pfout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
+complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+function pfout --argument-names dbname schema_table file_name_tag
+    if test -z $file_name_tag
+        set file_name_tag ""
+    else
+        set file_name_tag "__"$file_name_tag
+    end
+    set branch_name __(git branch --no-color | grep '\*' | ta 2)
+    set time_stamp __(date +'%Y-%m-%d_%I:%M:%S.%2N_%p')
+    set file_name $schema_table$branch_name$file_name_tag$time_stamp
+    pout $dbname $schema_table > $file_name
+end
+
+complete --command ls_psql_schemas --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+function ls_psql_schemas --argument-names dbname
+    pcoms $dbname "Select distinct table_schema from information_schema.tables where table_schema not in ('pg_catalog', 'information_schema')"
+end
+
+complete --command truncate_psql_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+complete --command truncate_psql_tables --condition 'begin; ≥ (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+function truncate_psql_tables --argument-names dbname
+    for schema_table in $argv[2..-1]
+        __truncate_psql_table $dbname $schema_table
+    end
+end
+
+function __truncate_psql_table --argument-names dbname schema_table
+    echo -n truncating $schema_table...
+    pcom $dbname "TRUNCATE TABLE $schema_table" > /dev/null
+    echo done.
+end
+
+complete --command ls_psql_schema_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+function ls_psql_schema_tables --argument-names dbname
+    pcoms $dbname "Select distinct(table_schema || '.' || table_name) from information_schema.tables where table_schema not in ('pg_catalog', 'information_schema')"
+end
+
+complete --command ls_psql_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
+complete --command ls_psql_tables --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+# complete --command ls_psql_tables --condition '== (count (__fish_print_cmd_args)) 2' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+function ls_psql_tables --argument-names dbname schema
+    pcoms $dbname "Select table_schema || '.' || table_name from information_schema.tables where table_schema = '$schema'"
+end
+
+function ls_parse_tables
+    pcoms postgres "Select table_name from information_schema.tables where table_schema = 'public' and table_name like 'log_%'"
+end
+
+function dump_parse_tables --argument-names file_name_tag
+    for table in (ls_parse_tables)
+        echo $table
+        pfout postgres $table $file_name_tag
+    end
+end
+
+function ls_summary_tables
+    pcoms distil_summary "Select table_name from information_schema.tables where table_schema = 'summary' and table_name not like '%_2%'"
+end
+
+function dump_summary_tables --argument-names file_name_tag
+    for table in (ls_summary_tables)
+        echo $table
+        pfout distil_summary "summary.$table" $file_name_tag
+    end
+end
+
+function ls_reporting_tables
+    pcoms distil_reporting "Select table_name from information_schema.tables where table_schema = 'reporting' and table_name not like '%_2%' and table_name not like 'counters'"
+end
+
+function dump_reporting_tables --argument-names file_name_tag
+    for table in (ls_reporting_tables)
+        echo $table
+        pfout distil_reporting "reporting.$table" $file_name_tag
+    end
+end
+
+function sdiff --argument-names f1 f2
+    icdiff (sort $f1 | psub) (sort $f2 | psub)
+end
+
+function sdiffv --argument-names f1 f2
+    vimdiff (sort $f1 | psub) (sort $f2 | psub)
+end
+
+function sudiff --argument-names f1 f2
+    diff (sort $f1 | uniq | psub) (sort $f2 | uniq | psub)
+end
+
+complete --command pbproc --arguments '(functions | tr --delete \,)' --authoritative
+function pbproc \
+    --description "Process contents of pb clipboard on OS X"
+    pbpaste | eval $argv | pbcopy
 end
