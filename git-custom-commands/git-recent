@@ -1,0 +1,7 @@
+#!/usr/bin/env fish
+
+echo PATH: $PATH
+
+# From
+# http://stackoverflow.com/questions/11135052/how-to-list-only-active-recently-changed-branches-in-git
+git for-each-ref --format='%(committerdate:short) %(refname)' refs/heads refs/remotes | sort
