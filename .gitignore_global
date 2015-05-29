@@ -1,7 +1,10 @@
 # ctags (and custom rtags)
-/tags
-/local.tags
+tags
+local.tags
 .rdoc
+
+# pry file
+*marshal.dump
 
 /.autotest
 /autotest

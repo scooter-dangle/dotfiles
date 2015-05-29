@@ -1,6 +1,15 @@
-status --is-interactive; and . ~/.config/fish/aliases.fish
+if status --is-interactive
+  . ~/.config/fish/aliases.fish
+end
 
-if test -e ~/dotfiles/git-custom-commands
+set --export PATH /usr/local/bin $PATH
+# for path_element in /usr/local/bin
+#   if not contains $path_element $PATH
+#     set --export PATH $path_element $PATH
+#   end
+# end
+
+if [ -e ~/dotfiles/git-custom-commands ]
   set --export PATH ~/dotfiles/git-custom-commands $PATH
 end
 
@@ -13,7 +22,7 @@ set --export PATH /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin $PA
 # set --export PATH ~/erlang/rebar $PATH
 # set --export PATH ~/erlang/concrete $PATH
 # set --export PATH ~/.cabal/bin $PATH
-# set --export PATH ~/node_modules/.bin $PATH
+set --export PATH ~/node_modules/.bin $PATH
 # set --export PATH $HOME/.rbenv/bin $PATH
 # set --export PATH $HOME/.rbenv/shims $PATH
 # set --export PATH $HOME/ruby/mruby/bin $PATH
@@ -32,11 +41,46 @@ set --export PATH $GOBIN $PATH
 
 set --export SEARCH_OPEN_LIMIT 15
 
+set --export PARINIT 'rTbgqR B=.,?_A_a Q=_s>|'
+
+if [ (uname) = Darwin ]
+  set --export MANPATH /usr/local/opt/coreutils/libexec/gnuman (manpath)
+  set --export MANPATH /usr/local/share/man (manpath)
+  set --export MANPATH /usr/local/opt/erlang/lib/erlang/man (manpath)
+end
+
+complete --command erl --old-option man --arguments '(ls /usr/local/opt/erlang/lib/erlang/man/man* | sed \'/\(man[0-9]:\|^\)$/ d; s/\.[0-9]$//\')' --authoritative --exclusive
+
+
 if which brew > /dev/null
   set --export PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
 end
 
-if test -e ~/.rvm
+function get_current_rvm_dir
+  dirname (which ruby)
+end
+
+function get_current_global_gem_dir
+  dirname (which bundle)
+end
+
+function get_current_gem_dir
+  set --local ruby_version (cat .ruby-version | sed 's/^ruby-//')
+  set --local gemset (cat .ruby-gemset)
+  echo -n $HOME/.rvm/gems/ruby-$ruby_version@$gemset/bin
+end
+
+if [ -e ~/.rvm ]
+  if begin; echo $PATH[1] | grep rvm --quiet --invert-match; end
+    set --export PATH (get_current_rvm_dir) $PATH
+    if which bundle >/dev/null ^&1
+      set --export PATH (get_current_global_gem_dir) $PATH
+    end
+    # if begin; [ -e .ruby-gemset ]; and [ -e .ruby-version ]; end
+    #   set --export PATH (get_current_gem_dir) $PATH
+    # end
+  end
+
   function rvm --description='Ruby enVironment Manager'
     # run RVM and capture the resulting environment
     set --local env_file (mktemp -t rvm.fish.XXXXXXXXXX)
@@ -51,16 +95,16 @@ if test -e ~/.rvm
   function __handle_rvmrc_stuff --on-variable PWD
     # Source a .rvmrc file in a directory after changing to it, if it exists.
     # To disable this fature, set rvm_project_rvmrc=0 in $HOME/.rvmrc
-    if test "$rvm_project_rvmrc" != 0
+    if [ "$rvm_project_rvmrc" != 0 ]
       set -l cwd $PWD
       while true
         if contains $cwd "" $HOME "/"
-          if test "$rvm_project_rvmrc_default" = 1
+          if [ "$rvm_project_rvmrc_default" = 1 ]
             rvm default 1>/dev/null 2>&1
           end
           break
         else
-          if test -e .rvmrc -o -e .ruby-version -o -e .ruby-gemset
+          if [ -e .rvmrc -o -e .ruby-version -o -e .ruby-gemset ]
             eval "rvm reload" > /dev/null
             eval "rvm rvmrc load" >/dev/null
             break
@@ -172,22 +216,22 @@ end
 # end
 # set fish_key_bindings fish_vi_key_bindings
 
-function install_rbenv
-  if test ! -d ~/.rbenv
-      set orig_dir (pwd)
-      cd ~
-      git clone https://github.com/sstephenson/rbenv.git
-      mv rbenv .rbenv
-      cd .rbenv
-      mkdir plugins
-      cd plugins
-      git clone https://github.com/sstephenson/ruby-build.git
-      cd $orig_dir
-      # Still need to do more things here
-  else
-      echo ~/.rbenv already exists!
-  end
-end
+# function install_rbenv
+#   if test ! -d ~/.rbenv
+#       set orig_dir (pwd)
+#       cd ~
+#       git clone https://github.com/sstephenson/rbenv.git
+#       mv rbenv .rbenv
+#       cd .rbenv
+#       mkdir plugins
+#       cd plugins
+#       git clone https://github.com/sstephenson/ruby-build.git
+#       cd $orig_dir
+#       # Still need to do more things here
+#   else
+#       echo ~/.rbenv already exists!
+#   end
+# end
 
 # Can't get this to work
 #if test -f ~/.LOW-COLOR-TERM -o -f ~/dotfiles/.LOW-COLOR-TERM
@@ -209,9 +253,9 @@ end
 #end
 
 # At least the following will work for manpages
-function man
-    bash -lc "man $argv"
-end
+# function man
+#     bash -lc "man $argv"
+# end
 
 # tmux looks at $EDITOR to determine whether to use vi keys
 set --export EDITOR vi
@@ -224,10 +268,10 @@ end
 # TODO - This shouldn't be is complicated.
 function test_for_rake
   begin
-    test -f Rakefile
-    or test -f rakefile
-    or test -f Rakefile.rb
-    or test -f rakefile.rb
+    [ -f Rakefile ]
+    or [ -f rakefile ]
+    or [ -f Rakefile.rb ]
+    or [ -f rakefile.rb ]
   end
 end
 
@@ -238,44 +282,20 @@ end
 
 # Rake completion helper
 function rake_args
-  set checksum (__rake_checksum)
-  set task_full  /tmp/Rakefile.tasks.full.$checksum
-  set task_names /tmp/Rakefile.tasks.names.$checksum
-  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
-  if not test -f $task_names
-    if test -f Gemfile
+  set task_full  /tmp/Rakefile.tasks.full.(__rake_checksum)
+  if not [ -f $task_full ]
+    if [ -f Gemfile ]
       set rake_prefix 'bundle exec'
     end
 
     eval $rake_prefix rake -T \
-    | sed --regexp-extended   's/^rake (((\w|\[|\]|-|\,)+)(\:(\w|\[|\]|-|\,)+)*) +# (.+)$/\1 # \6/' \
+    | sed --regexp-extended   's/^rake (((\w|\[|\]|-|\,)+)(\:(\w|\[|\]|-|\,)+)*) +# (.+)$/\1\t\6/' \
     > $task_full
-
-    cat $task_full \
-    | sed --regexp-extended   's/^([^#]+) # (.+)$/\1/' \
-    > $task_names
-
-    cat $task_full \
-    | sed --regexp-extended   's/^([^#]+) # (.+)$/\2/' \
-    > $task_desc
-
   end
-  cat $task_names
+  cat $task_full
 end
 
-# Rake completion helper
-# Doesn't work  :(
-function rake_desc
-  set checksum (md5sum Rakefile | sed --regexp-extended 's/^\b(.+)\b +Rakefile$/\1/')
-  set task_desc  /tmp/Rakefile.tasks.desc.$checksum
-  if test -f $task_desc
-    cat $task_desc
-  else
-    echo rake task
-  end
-end
-
-complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --description '(rake_desc)' --no-files
+complete --command rake --condition 'test_for_rake' --arguments '(rake_args)' --no-files
 
 complete --command lolcat --long-option spread    --short-option p --exclusive --description "Rainbow spread (default: 3.0)"
 complete --command lolcat --long-option freq      --short-option F --exclusive --description "Rainbow frequency (default: 0.1)"
@@ -325,7 +345,7 @@ function fish_prompt --description 'Write out the prompt'
 
   printf '%s' (__fish_git_prompt)
 
-  if not test $last_status -eq 0
+  if not [ $last_status -eq 0 ]
       set_color $fish_color_error
   end
 

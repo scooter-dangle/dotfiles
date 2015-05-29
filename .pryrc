@@ -1,26 +1,51 @@
+Pry.config.editor = 'vim'
 Pry.config.theme = 'twilight'
 
-RequiredPaths = {}
-
-def reversibly_require(path)
-  return false if RequiredPaths[path]
-  original_constants = Object.constants
-  require path
-  return true
-ensure
-  new_constants = Object.constants - original_constants
-  RequiredPaths[path] = new_constants
+def dump_session(filename = 'marshal.dump')
+  IO.write(new_dump_filename(filename), Marshal.dump(instance_variables_hash))
 end
 
-def unrequire(path)
-  return false unless RequiredPaths[path]
-  RequiredPaths.delete(path).each do |const|
-    Object.send(:remove_const, const)
+def load_session(filename = 'marshal.dump')
+  Marshal.load(IO.read(dump_filename(filename))).each do |var, value|
+    instance_variable_set(var, value)
   end
-  return true
+  if instance_variable_defined?('@_dump_evals')
+    @_dump_evals.each do |var, value|
+      instance_variable_set(var, eval(value))
+    end
+  else
+    @_dump_evals = {}
+  end
+  instance_variables
 end
 
-def re_require(path)
-  unrequire(path)
-  reversibly_require(path)
+def instance_variables_hash
+  verboten_vars = instance_variable_defined?('@_dump_evals') ?
+    @_dump_evals.keys :
+    []
+  instance_variables.-(verboten_vars).map do |var|
+    [var, instance_variable_get(var)]
+  end.to_h
+end
+
+def new_dump_filename(base_filename = 'marshal.dump')
+  return base_filename unless File.exists?(base_filename)
+
+  moar_files = Dir["*_#{base_filename}"]
+  return "0_#{base_filename}" if moar_files.empty?
+
+  dump_filename_sort(moar_files, base_filename).last.split(?_).tap { |prefix, *_| prefix.replace(prefix.succ) }.join(?_)
+end
+
+def dump_filename(base_filename = 'marshal.dump')
+  dump_filename_sort(Dir["{,*_}#{base_filename}"], base_filename).last
+end
+
+def dump_filename_sort(filenames, base_filename = 'marshal.dump')
+  filenames.sort_by do |filename|
+    match = filename[/\A\d+(?=_#{base_filename}\z)/]
+      match ?
+      match.to_i :
+      -1
+  end
 end

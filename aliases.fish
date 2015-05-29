@@ -1,8 +1,8 @@
-set -u aliases ~/.config/fish/aliases.fish
+set --universal aliases ~/.config/fish/aliases.fish
 
 # Tip from M Subelsky:
 function ea \
-  --description "Edit Aliases (and then reload them)"
+    --description "Edit Aliases (and then reload them)"
     vim $aliases
     and . $aliases
 end
@@ -11,13 +11,21 @@ end
 # the source of the preceding tip
 complete --command ga --arguments '(functions --all --names)' --authoritative --exclusive
 function ga \
-  --description "Grep Aliases"
+    --description "Grep Aliases"
     functions $argv | pygmentize -l bash
+end
+
+function __fish_print_cmd_args
+    commandline -poc
+end
+
+function __fish_print_cmd_args_without_options
+    __fish_print_cmd_args | grep '^[^-]'
 end
 
 function ga_old --argument target \
   --description 'Grep Aliases'
-	if test (grep -l "function "$target $aliases)
+    if test (grep -l "function "$target $aliases)
         set target "function "$target
     end
     set matching_lines (line_number_matches $target $aliases)
@@ -33,7 +41,7 @@ function line_number_matches --argument-names target target_file
 end
 
 function func_blocks \
-  --description "Output surrounding function blocks from "$aliases" from line numbers in argv"
+    --description "Output surrounding function blocks from "$aliases" from line numbers in argv"
     set func_start_lines (line_number_matches '^function ' $aliases)
     set func_end_lines   (line_number_matches '^end'       $aliases)
 
@@ -44,41 +52,86 @@ function func_blocks \
     set i 1
     set total_functions (count $func_start_lines)
     set n 1
-    while begin; ≤ $n $total_functions
-             and ≤ $i $total_matches
-      end
-        if  begin; ≥ $argv[$i] $func_start_lines[$n]
-               and « $argv[$i] $func_end_lines[$n]
-            end
-            set next_index (++ (count $out_start_lines))
+    while [ $n -le $total_functions -a $i -le $total_matches ]
+        if [ $argv[$i] -ge $func_start_lines[$n] -a $argv[$i] -lt $func_end_lines[$n] ]
+            set next_index (math (count $out_start_lines)" + 1")
             set out_start_lines[$next_index] $func_start_lines[$n]
             set out_end_lines[$next_index]   $func_end_lines[$n]
-            set i (++ $i)
+            set i (math "$i + 1")
 
             # Eat up additional grep matches for $target
             # from the current function block (i.e., move on
             # from any further grepped matches in this current
             # function...we already marked this block for output)
-            while begin; ≤ $i $total_matches
-                     and ≥ $argv[$i] $out_start_lines[-1]
-                     and « $argv[$i] $out_end_lines[-1]
+            # while [ $i -le $total_matches -a $argv[$i] -ge $out_start_lines[-1] -a $argv[$i] -lt $out_end_lines[-1] ]
+            while begin; [ $i -le $total_matches ]
+                     and [ $argv[$i] -ge $out_start_lines[-1] ]
+                     and [ $argv[$i] -lt $out_end_lines[-1] ]
                   end
-                set i (++ $i)
+                set i (math "$i + 1")
             end
         end
-        set n (++ $n)
+        set n (math "$n + 1")
     end
 
     set total_results (count $out_start_lines)
     set m 1
-    while ≤ $m $total_results
+    while [ $m -le $total_results ]
         cat $aliases \
         |   head -n $out_end_lines[$m] \
-        |   tail -n (++ (— $out_end_lines[$m] $out_start_lines[$m]))
-        set m (++ $m)
+        |   tail -n (math "$out_end_lines[$m] - $out_start_lines[$m] + 1")
+        set m (math "$m + 1")
     end
     return 0
 end
+
+# function func_blocks \
+#   --description "Output surrounding function blocks from "$aliases" from line numbers in argv"
+#     set func_start_lines (line_number_matches '^function ' $aliases)
+#     set func_end_lines   (line_number_matches '^end'       $aliases)
+
+#     set out_start_lines
+#     set out_end_lines
+
+#     set total_matches (count $argv)
+#     set i 1
+#     set total_functions (count $func_start_lines)
+#     set n 1
+#     while begin; ≤ $n $total_functions
+#              and ≤ $i $total_matches
+#       end
+#         if  begin; ≥ $argv[$i] $func_start_lines[$n]
+#                and « $argv[$i] $func_end_lines[$n]
+#             end
+#             set next_index (++ (count $out_start_lines))
+#             set out_start_lines[$next_index] $func_start_lines[$n]
+#             set out_end_lines[$next_index]   $func_end_lines[$n]
+#             set i (++ $i)
+
+#             # Eat up additional grep matches for $target
+#             # from the current function block (i.e., move on
+#             # from any further grepped matches in this current
+#             # function...we already marked this block for output)
+#             while begin; ≤ $i $total_matches
+#                      and ≥ $argv[$i] $out_start_lines[-1]
+#                      and « $argv[$i] $out_end_lines[-1]
+#                   end
+#                 set i (++ $i)
+#             end
+#         end
+#         set n (++ $n)
+#     end
+
+#     set total_results (count $out_start_lines)
+#     set m 1
+#     while ≤ $m $total_results
+#         cat $aliases \
+#         |   head -n $out_end_lines[$m] \
+#         |   tail -n (++ (— $out_end_lines[$m] $out_start_lines[$m]))
+#         set m (++ $m)
+#     end
+#     return 0
+# end
 
 function amath \
   --description "'Advanced' math (bc with math library option)"
@@ -380,19 +433,19 @@ function ++ --argument-names i
 end
 
 function « --argument-names left_side right_side
-    return (test $left_side -lt $right_side)
+    test $left_side -lt $right_side
 end
 
 function ≤ --argument-names left_side right_side
-    return (test $left_side -le $right_side)
+    test $left_side -le $right_side
 end
 
 function » --argument-names left_side right_side
-    return (test $left_side -gt $right_side)
+    test $left_side -gt $right_side
 end
 
 function ≥ --argument-names left_side right_side
-    return (test $left_side -ge $right_side)
+    test $left_side -ge $right_side
 end
 
 function anon --argument-names cmd
@@ -450,19 +503,19 @@ end
 function __conditionally_pygmentize --argument-names target \
   --description "Runs argument through pygmentize -lbash only if pygmentize can be found"
     # helper
-    if test (which pygmentize)
-        pygmentize -lbash $target
-    else
-        cat $target
-    end
+    cat $target
+    # if test (which pygmentize)
+    #     pygmentize -lbash $target
+    # else
+    #     cat $target
+    # end
 end
 
 function __grep_highlight --argument-names target
     # helper
     while read line
         if test (echo $line | grep -l $target ^ /dev/null)
-            echo $line \
-            | grep $target
+            echo $line | grep $target
         else
             echo $line
         end
@@ -491,14 +544,14 @@ function pwdd --argument-names prev_path_fragment new_path_fragment \
     pwd | sed "s/$prev_path_fragment/$new_path_fragment/g"
 end
 
-if begin; which brew > /dev/null
+    if begin; which brew > /dev/null
           and   test -e /usr/local/opt/gnu-sed/bin/sed
    end
-    function sed \
-      --description "Remapping of sed for OS X"
-        /usr/local/opt/gnu-sed/bin/sed $argv
-    end
+function sed \
+  --description "Remapping of sed for OS X"
+    /usr/local/opt/gnu-sed/bin/sed $argv
 end
+    end
 
 function cdd --argument-names prev_path_fragment new_path_fragment \
   --description "Attempt to mimic zsh cd command"
@@ -518,9 +571,84 @@ function la
     ls --almost-all --human-readable -l --group-directories-first --classify $argv
 end
 
+abbr --add bx "bundle exec"
+complete --command bundle --condition "[ (commandline | tr --squeeze-repeats ' ' | sed 's/^ //g' | grep ' ' --only-matching | wc --lines) -ge 2 -a (commandline | cut --fields 2 --delimiter ' ') = exec ]" --arguments "(__fish_complete_subcommand -- -u --unset)"
+complete --command bundle --condition "[ (commandline | tr --squeeze-repeats ' ' | sed 's/^ //g' | grep ' ' --only-matching | wc --lines) -ge 3 -a (commandline | cut --fields 2 --delimiter ' ') = exec ]" --arguments "(complete --do-complete=(commandline | sed 's/^ *bundle *exec *//'))" --authoritative
+complete --command bx --arguments "(complete --do-complete=(commandline | sed 's/^bx //'))"
 function bx
     bundle exec $argv
 end
+
+complete --command boot2docker --arguments "(boot2docker ^| sed 's/^.*{\(.*\)}.*\$/\1/' | tr '|' '\n')"
+
+function boot2docker_local_ip
+    boot2docker config | grep Lower | sed 's/^.*"\(.*\)"$/\1/'
+end
+
+set __cucumber_formatters debug\tFor developing formatters - prints the calls made to the listeners.\nhtml\tGenerates a nice looking HTML report.\njson\tPrints the feature as JSON\njson_pretty\tPrints the feature as prettified JSON\njunit\tGenerates a report similar to Ant+JUnit.\npretty\tPrints the feature as is - in colours.\nprogress\tPrints one character per scenario.\nrerun\tPrints failing files with line numbers.\nstepdefs\tPrints All step definitions with their locations.\nusage\tPrints where step definitions are used.\nCucumberNc\tUse OS X notifications.
+
+function __cucumber_formatters
+    echo "debug:For developing formatters - prints the calls made to the listeners.
+html:Generates a nice looking HTML report.
+json:Prints the feature as JSON
+json_pretty:Prints the feature as prettified JSON
+junit:Generates a report similar to Ant+JUnit.
+pretty:Prints the feature as is - in colours.
+progress:Prints one character per scenario.
+rerun:Prints failing files with line numbers.
+stepdefs:Prints All step definitions with their locations.
+usage:Prints where step definitions are used.
+CucumberNc:Use OS X notifications."
+end
+
+
+complete --command cucumber --short-opt r --long-opt require --description "Require files before executing the features." --require-parameter
+complete --command cucumber --long-opt i18n --description "List keywords for in a particular language." --arguments "(bundle exec cucumber --i18n help | sed 's/\s*|\s*/|/g' | sed --regexp-extended 's/^\|([^|]+)\|([^|]+)\|.+\$/\1\t\2/g')" --exclusive --authoritative --no-files
+# complete --command cucumber --short-opt f --long-opt format --arguments "(echo -n $__cucumber_formatters)" --description "How to format features (Default: pretty)." --no-files --require-parameter
+complete --command cucumber --short-opt f --long-opt format --arguments "(__cucumber_formatters | tr ':' '\t')" --description "How to format features (Default: pretty)." --no-files --require-parameter
+complete --command cucumber --short-opt o --long-opt out --description "Write output to a file/directory instead of STDOUT." --require-parameter
+
+function __cucumber_tags
+    bundle exec cucumber --dry-run --require ~/dotfiles/list_tags.rb --format Cucumber::Formatter::ListTags | sed 's/^\(.*\)$/\1\n~\1/g'
+end
+
+complete --command cucumber --short-opt t --long-opt tags --arguments "(__cucumber_tags)" --description "Only execute the features or scenarios with tags matching TAG_EXPRESSION." --require-parameter
+complete --command cucumber --short-opt n --long-opt name --description "Only execute the feature elements which match part of the given name." --require-parameter
+complete --command cucumber --short-opt e --long-opt exclude --description "Don't run feature files or require ruby files matching PATTERN." --require-parameter
+complete --command cucumber --short-opt p --long-opt profile --description "Pull commandline arguments from cucumber.yml."
+complete --command cucumber --short-opt P --long-opt no-profile --description "Disables all profile loading to avoid using the 'default' profile."
+complete --command cucumber --short-opt c --long-opt color --description "Use ANSI color in the output."
+complete --command cucumber --long-opt no-color --description "Don't use ANSI color in the output."
+complete --command cucumber --short-opt d --long-opt dry-run --description "Invokes formatters without executing the steps."
+complete --command cucumber --short-opt a --long-opt autoformat --description "Reformats (pretty prints) feature files and write them to DIRECTORY." --require-parameter
+complete --command cucumber --short-opt m --long-opt no-multiline --description "Don't print multiline strings and tables under steps."
+complete --command cucumber --short-opt s --long-opt no-source --description "Don't print the file and line of the step definition with the steps."
+complete --command cucumber --short-opt i --long-opt no-snippets --description "Don't print snippets for pending steps."
+complete --command cucumber --short-opt I --long-opt snippet-type --description "Use different snippet type (Default: regexp)." --require-parameter --no-files
+
+function __cucumber_snippet_types
+    # TODO
+    echo "
+     classic: Snippets without parentheses. Note that these cause a warning from modern versions of Ruby. e.g. Given /^missing step\$/
+     percent: Snippets with percent regexp e.g. Given %r{^missing step\$}
+     regexp : Snippets with parentheses    e.g. Given(/^missing step\$/)
+     "
+ end
+
+complete --command cucumber --short-opt q --long-opt quiet --description "Alias for --no-snippets --no-source."
+complete --command cucumber --short-opt b --long-opt backtrace --description "Show full backtrace for all errors."
+complete --command cucumber --short-opt S --long-opt strict --description "Fail if there are any undefined or pending steps."
+complete --command cucumber --short-opt w --long-opt wip --description "Fail if there are any passing scenarios."
+complete --command cucumber --short-opt v --long-opt verbose --description "Show the files and features loaded."
+complete --command cucumber --short-opt g --long-opt guess --description "Guess best match for Ambiguous steps."
+complete --command cucumber --short-opt l --long-opt lines --description "Run given line numbers. Equivalent to FILE:LINE syntax" --require-parameter
+complete --command cucumber --short-opt x --long-opt expand --description "Expand Scenario Outline Tables in output."
+complete --command cucumber --long-opt drb --description "Run features against a DRb server. (i.e. with the spork gem)"
+complete --command cucumber --long-opt no-drb --description "Don't run features against a DRb server. (i.e. with the spork gem)"
+complete --command cucumber --long-opt port --description "Specify DRb port. Ignored without --drb" --require-parameter
+complete --command cucumber --long-opt dotcucumber --description "Write metadata to DIR" --require-parameter
+complete --command cucumber --long-opt version --description "Show version."
+complete --command cucumber --short-opt h --long-opt help --description "You're looking at it."
 
 function rsh
     pry --require rake
@@ -534,15 +662,23 @@ function git-recent \
   --description "Show recent activity by on all branches"
     # From
     # http://stackoverflow.com/questions/11135052/how-to-list-only-active-recently-changed-branches-in-git
-    reverse ( git for-each-ref --sort=-committerdate --format='%(committerdate:short) %(refname)' refs/heads refs/remotes )
+    git for-each-ref --format='%(committerdate:short) %(refname)' refs/heads refs/remotes | sort
 end
 
 function gs
     git status -s $argv
 end
 
+complete --command gd --arguments "(complete --do-complete='git diff ')" --authoritative --exclusive
 function gd
     git diff -b --color --ignore-all-space $argv
+end
+
+abbr --add gch "git checkout"
+
+complete --command gd --arguments "(complete --do-complete='git diff ')" --authoritative --exclusive
+function gds
+    git diff --stat $argv
 end
 
 function gl
@@ -553,16 +689,34 @@ function gb
     git branch $argv
 end
 
+complete --command gd --arguments "(complete --do-complete='git pull ')" --authoritative --exclusive
 function gp
     git pull --rebase $argv
 end
 
+complete --command gd --arguments "(complete --do-complete='git fetch ')" --authoritative --exclusive
 function gf
     git fetch $argv
 end
 
+complete --command gd --arguments "(complete --do-complete='git push ')" --authoritative --exclusive
 function GP
     git push $argv
+end
+
+complete --command gd --arguments "(complete --do-complete='git stash ')" --authoritative --exclusive
+function gst
+    git stash $argv
+end
+
+complete --command gd --arguments "(complete --do-complete='git stash pop ')" --authoritative --exclusive
+function gsp
+    git stash pop $argv
+end
+
+function gme \
+    --description "Edit files with merge conflicts"
+    vim (git status --porcelain | sed --regexp-extended --quiet "/^UU /s/^UU //p")
 end
 
 function gsolt \
@@ -655,9 +809,12 @@ function vsf \
 end
 
 function l \
-  --description "Grab a particular line from file or pipe" \
-  --argument-names target
-    sed (+ $target '-1')"p" --quiet
+  --description "Grab a range of lines from file or pipe" \
+  --argument-names range_start range_stop
+    if [ -z "$range_stop" ]
+        set range_stop $range_start
+    end
+    sed $range_start,$range_stop'p;'$range_stop'q' --silent
 end
 
 function paj \
@@ -669,8 +826,8 @@ function paj \
 end
 
 function md
-    mkdir --parents $argv[1]
-    and cd $argv[1]
+    mkdir --parents $argv
+    and cd $argv
 end
 
 function psfind \
@@ -829,7 +986,7 @@ function search_remember
     set --local tmpfile (mktemp --suffix _last_searched_files)
 
     if == $_ s
-        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --ignore doc --smart-case --skip-vcs-ignores --silent
+        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore '*.dump' --ignore docs --ignore doc --smart-case --skip-vcs-ignores --silent
         ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
         __search_remember_completer_s $argv &
     else if == $_ f
@@ -1036,7 +1193,11 @@ function recently_searched_files
 end
 
 function blerg --argument-names the_royal_nergin
-    echo blerg $the_royal_nergin ferg snerg
+    if [ -z "$the_royal_nergin" ]
+        echo blerg ferg snerg
+    else
+        echo blerg $the_royal_nergin ferg snerg
+    end
 end
 
 function lsusers \
@@ -1194,10 +1355,11 @@ function rtags \
     return 0
 end
 
-function skiq \
-  --description "Startup sidekiq worker"
-    rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
-end
+    # function skiq \
+    #   --description "Startup sidekiq worker"
+    # env REDIS_PORT_6379_TCP_ADDR=127.0.0.1 POSTGRES_PORT_5432_TCP_ADDR=localhost rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
+abbr --add skiq "rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose"
+    # end
 
 function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
@@ -1246,11 +1408,11 @@ complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250
 # complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
 # complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
 
-if == (uname) Darwin
-    function postgres_start_server
-        launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
-    end
+    if [ (uname) -a Darwin ]
+function postgres_start_server
+    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
 end
+    end
 
 for project in ~/codes/{prism,portal,api,database-migrations,automation-rlw} ~/codes/bots/* ~/go/src/github.com/distil/*
     set --local project (echo $project | sed 's#/$##')
@@ -1302,7 +1464,7 @@ function pfout --argument-names dbname schema_table file_name_tag
     end
     set branch_name __(git branch --no-color | grep '\*' | ta 2)
     set time_stamp __(date +'%Y-%m-%d_%I:%M:%S.%2N_%p')
-    set file_name $schema_table$branch_name$file_name_tag$time_stamp
+    set file_name $schema_table$branch_name$file_name_tag$time_stamp".tsv"
     pout $dbname $schema_table > $file_name
 end
 
@@ -1387,3 +1549,63 @@ function pbproc \
     --description "Process contents of pb clipboard on OS X"
     pbpaste | eval $argv | pbcopy
 end
+
+# From https://github.com/fish-shell/fish-shell/issues/159#issuecomment-37057175
+complete --command pipeset --wraps set
+function pipeset --no-scope-shadowing
+    set --local _options
+    set --local _variables
+    for _item in $argv
+        switch $_item
+            case '-*'
+                set _options $_options $_item
+            case '*'
+                set _variables $_variables  $_item
+        end
+    end
+    for _variable in $_variables
+        set $_variable ""
+    end
+    while read _line
+        for _variable in $_variables
+            set $_options $_variable $$_variable$_line\n
+        end
+    end
+    return 0
+end
+
+# Docker command completion
+    if which docker > /dev/null
+        # complete --command "docker"
+    end
+
+complete --command lrk --condition '≥ (count (commandline --tokenize)) 2' --arguments '(begin; set --local c_tokenize (commandline --tokenize); set --local c_cbuffer (commandline --current-buffer); set --local c_cjob (commandline --current-job); set --local c_cprocess (commandline --current-process); set --local c_ctoken (commandline --current-token); set --local c_cursor (commandline --cursor); set --local c_cacursor (commandline --cut-at-cursor); set --local an_arg dummy_arg; breakpoint; echo $an_arg; end)'
+function lrk --argument-names stuff things
+    set --local florb $stuff
+    echo $florb
+end
+
+# From oh-my-fish
+function __fishy_fish
+echo "                     "(set_color F00)"___
+      ___======____="(set_color FF7F00)"-"(set_color FF0)"-"(set_color FF7F00)"-="(set_color F00)")
+    /T            \_"(set_color FF0)"--="(set_color FF7F00)"=="(set_color F00)")
+    [ \ "(set_color FF7F00)"("(set_color FF0)"0"(set_color FF7F00)")   "(set_color F00)"\~    \_"(set_color FF0)"-="(set_color FF7F00)"="(set_color F00)")
+     \      / )J"(set_color FF7F00)"~~    \\"(set_color FF0)"-="(set_color F00)")
+      \\\\___/  )JJ"(set_color FF7F00)"~"(set_color FF0)"~~   "(set_color F00)"\)
+       \_____/JJJ"(set_color FF7F00)"~~"(set_color FF0)"~~    "(set_color F00)"\\
+       "(set_color FF7F00)"/ "(set_color FF0)"\  "(set_color FF0)", \\"(set_color F00)"J"(set_color FF7F00)"~~~"(set_color FF0)"~~     "(set_color FF7F00)"\\
+      (-"(set_color FF0)"\)"(set_color F00)"\="(set_color FF7F00)"|"(set_color FF0)"\\\\\\"(set_color FF7F00)"~~"(set_color FF0)"~~       "(set_color FF7F00)"L_"(set_color FF0)"_
+      "(set_color FF7F00)"("(set_color F00)"\\"(set_color FF7F00)"\\)  ("(set_color FF0)"\\"(set_color FF7F00)"\\\)"(set_color F00)"_           "(set_color FF0)"\=="(set_color FF7F00)"__
+       "(set_color F00)"\V    "(set_color FF7F00)"\\\\"(set_color F00)"\) =="(set_color FF7F00)"=_____   "(set_color FF0)"\\\\\\\\"(set_color FF7F00)"\\\\
+              "(set_color F00)"\V)     \_) "(set_color FF7F00)"\\\\"(set_color FF0)"\\\\JJ\\"(set_color FF7F00)"J\)
+                          "(set_color F00)"/"(set_color FF7F00)"J"(set_color FF0)"\\"(set_color FF7F00)"J"(set_color F00)"T\\"(set_color FF7F00)"JJJ"(set_color F00)"J)
+                          (J"(set_color FF7F00)"JJ"(set_color F00)"| \UUU)\\
+                           (UU)"(set_color normal)\n\n
+end
+
+  if [ (uname) -a Darwin ]
+    function chrome-app --argument-names url --description "Open url in chrome's app mode"
+      /opt/homebrew-cask/Caskroom/google-chrome/latest/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --app="$url"
+    end
+  end
