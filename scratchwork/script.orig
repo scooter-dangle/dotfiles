@@ -1,0 +1,3 @@
+
+cell("season") == "Fall" { print cell("fruit") }
+

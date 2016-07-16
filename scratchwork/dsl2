@@ -1,0 +1,7 @@
+@set csqrd (@asqrd + @bsqrd)
+@set asqrd (@a * @a)
+@set bsqrd (@b * @b)
+@set a 3
+@set b 4
+
+@csqrd + (@asqrd * @csqrd)

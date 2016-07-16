@@ -1,0 +1,7 @@
+@set bark Arf!
+@set name Barkley
+
+Hello! My name is @name, and
+I am such a good dog!
+My family says "@name! Good @name!",
+and I say "@bark @bark".
