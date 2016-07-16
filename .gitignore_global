@@ -1,13 +1,19 @@
 # ctags (and custom rtags)
 tags
+gem.tags
 local.tags
 .rdoc
+
+.starscope.db
 
 # pry file
 *marshal.dump
 
 /.autotest
 /autotest
+
+prototype/
+prototype
 
 # vim
 [._]*.s[a-w][a-z]
