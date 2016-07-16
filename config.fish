@@ -56,14 +56,16 @@ if [ -e "$HOME/.iterm2" ]
   __conditional_path_prepend "$HOME/.iterm2"
 end
 
-__conditional_path_prepend /usr/local/bin
+if [ -e /usr/local/bin ]
+  __conditional_path_prepend /usr/local/bin
+end
 # for path_element in /usr/local/bin
 #   if not contains $path_element $PATH
 #     set --export PATH $path_element $PATH
 #   end
 # end
 
-if [ -e ~/dotfiles/git-custom-commands ]
+if [ -d ~/dotfiles/git-custom-commands ]
   __conditional_path_prepend ~/dotfiles/git-custom-commands
 end
 
@@ -71,16 +73,24 @@ if [ -d ~/.cargo/bin ]
   __conditional_path_prepend ~/.cargo/bin
 end
 
-__conditional_path_prepend $HOME/apps
+if [ -d $HOME/apps ]
+  __conditional_path_prepend $HOME/apps
+end
 
-__conditional_path_prepend /usr/local/opt/coreutils/libexec/gnubin
-__conditional_path_prepend /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin
+if [ -d /usr/local/opt/coreutils/libexec/gnubin ]
+  __conditional_path_prepend /usr/local/opt/coreutils/libexec/gnubin
+end
+if [ -d /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin ]
+  __conditional_path_prepend /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin
+end
 # set --export NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
 # set --export PATH ~/erlang/rebar $PATH
 # set --export PATH ~/erlang/concrete $PATH
 # set --export PATH ~/.cabal/bin $PATH
-__conditional_path_prepend ~/node_modules/.bin
+if [ -d ~/node_modules/.bin ]
+  __conditional_path_prepend ~/node_modules/.bin
+end
 # set --export PATH $HOME/.rbenv/bin $PATH
 # set --export PATH $HOME/.rbenv/shims $PATH
 # set --export PATH $HOME/ruby/mruby/bin $PATH
@@ -93,10 +103,14 @@ set --export GOPATH $HOME/go
 set --export GOBIN $HOME/go/bin
 # set --export PATH /usr/local/go/bin $PATH
 
-__conditional_path_prepend $GOBIN
+if [ -d $GOBIN ]
+  __conditional_path_prepend $GOBIN
+end
 
 set --export RUST_SRC_PATH ~/stuffs/rust/rust/src
-__conditional_path_prepend ~/.rust/bin
+if [ -d ~/.rust/bin ]
+  __conditional_path_prepend ~/.rust/bin
+end
 
 # set --export PATH $HOME/.luarocks/bin $PATH
 
