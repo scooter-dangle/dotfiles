@@ -1,4 +1,4 @@
-set --universal aliases ~/.config/fish/aliases.fish
+set --universal aliases ~/dotfiles/aliases.fish
 
 # Tip from M Subelsky:
 function ea \
@@ -16,7 +16,7 @@ function ga \
 end
 
 function __fish_print_cmd_args
-    commandline -poc
+    commandline --current-process --tokenize --cut-at-cursor
 end
 
 function __fish_print_cmd_args_without_options
@@ -78,11 +78,15 @@ function func_blocks \
     set m 1
     while [ $m -le $total_results ]
         cat $aliases \
-        |   head -n $out_end_lines[$m] \
-        |   tail -n (math "$out_end_lines[$m] - $out_start_lines[$m] + 1")
+        |   head --lines $out_end_lines[$m] \
+        |   tail --lines (math "$out_end_lines[$m] - $out_start_lines[$m] + 1")
         set m (math "$m + 1")
     end
     return 0
+end
+
+function bpac
+    ~/stuffs/baltimore_public_art_commons
 end
 
 # function func_blocks \
@@ -136,6 +140,19 @@ end
 function amath \
   --description "'Advanced' math (bc with math library option)"
     echo $argv | bc --mathlib
+end
+
+complete --command secrify --arguments "(complete --do-complete='gpg --recipient ')" --authoritative --exclusive
+function secrify --argument-names recipient
+    set text_filename ~/Downloads/text.txt
+    set encrypted_filename "$text_filename.gpg"
+    if [ -e $encrypted_filename ]
+        rm  $encrypted_filename
+    end
+    vim $text_filename
+    and gpg --recipient $recipient --encrypt $text_filename
+    and echo > $text_filename
+    echo $encrypted_filename
 end
 
 function floor \
@@ -294,59 +311,6 @@ function != --argument-names leftside rightside
     return (test $leftside != $rightside)
 end
 
-set -u alphabet a b c d e f g h i j k l m n o p q r s t u v w x y z
-set -u Alphabet A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-
-function range
-    … $argv
-end
-
-function … \
-  --description "Numeric or alphabetic range with optional step"
-    set compare ≤
-    switch (count $argv)
-    case 1
-        set i 1
-        set n $argv[1]
-        set incr 1
-    case 2
-        set i $argv[1]
-        set n $argv[2]
-        set incr 1
-    case 3
-        set i $argv[1]
-        set n $argv[2]
-        set incr $argv[3]
-        if « $incr 0
-            set compare ≥
-        end
-    case '*'
-        return 1
-    end
-
-    if contains -- $n $alphabet
-        if == 1 $i
-            set i $alphabet[$i]
-        end
-        set source_size (count $alphabet)
-        at_all $source_size $alphabet (… (contains --index $i $alphabet) (contains --index $n $alphabet) $incr)
-        return 0
-    else if contains -- $n $Alphabet
-        if == 1 $i
-            set i $Alphabet[$i]
-        end
-        set source_size (count $Alphabet)
-        at_all $source_size $Alphabet (… (contains --index $i $Alphabet) (contains --index $n $Alphabet) $incr)
-        return 0
-    end
-
-    while eval $compare $i $n
-        echo $i
-        set i (+ $i $incr)
-    end
-    return 0
-end
-
 function at
     set index $argv[-1]
     echo $argv[$index]
@@ -490,7 +454,7 @@ end
 
 function pp_fish_aliases --argument-names target
     # helper
-    sed -ue "s/\([^)]\);\s*/\1\n/g" $target \
+    sed --unbuffered --expression "s/\([^)]\);\s*/\1\n/g" $target \
     | fish_indent
 end
 
@@ -524,7 +488,7 @@ function __grep_highlight --argument-names target
 end
 
 function up
-    cd ..
+    ..
 end
 
 function bk
@@ -536,7 +500,7 @@ function fd
 end
 
 function hm
-    cd ~
+    ~
 end
 
 function pwdd --argument-names prev_path_fragment new_path_fragment \
@@ -579,10 +543,18 @@ function bx
     bundle exec $argv
 end
 
-complete --command boot2docker --arguments "(boot2docker ^| sed 's/^.*{\(.*\)}.*\$/\1/' | tr '|' '\n')"
+complete --command boot2docker --arguments "(boot2docker ^| sed 's/^.*{\(.*\)}.*\$/\1/' | tr '|' '\n')" --authoritative --exclusive
+
+function pru
+    rvm 2.2.0 exec pru $argv
+end
 
 function boot2docker_local_ip
     boot2docker config | grep Lower | sed 's/^.*"\(.*\)"$/\1/'
+end
+
+function copy_github_password
+    lpass show --notes --clip 4904780006
 end
 
 set __cucumber_formatters debug\tFor developing formatters - prints the calls made to the listeners.\nhtml\tGenerates a nice looking HTML report.\njson\tPrints the feature as JSON\njson_pretty\tPrints the feature as prettified JSON\njunit\tGenerates a report similar to Ant+JUnit.\npretty\tPrints the feature as is - in colours.\nprogress\tPrints one character per scenario.\nrerun\tPrints failing files with line numbers.\nstepdefs\tPrints All step definitions with their locations.\nusage\tPrints where step definitions are used.\nCucumberNc\tUse OS X notifications.
@@ -658,65 +630,69 @@ function in_git_repo
     gs ^ /dev/null
 end
 
-function git-recent \
-  --description "Show recent activity by on all branches"
+function git-branch-activity
     # From
     # http://stackoverflow.com/questions/11135052/how-to-list-only-active-recently-changed-branches-in-git
     git for-each-ref --format='%(committerdate:short) %(refname)' refs/heads refs/remotes | sort
 end
 
-function gs
-    git status -s $argv
+function git-recent --description "Show recent activity on all branches"
+    git-branch-activity | tail --lines 6
 end
 
-complete --command gd --arguments "(complete --do-complete='git diff ')" --authoritative --exclusive
-function gd
-    git diff -b --color --ignore-all-space $argv
+function gdb --argument-names commit_number
+    if [ (count $argv) -gt 1 ]
+        set more_args $argv[2..-1]
+    end
+
+    git diff --compaction-heuristic --ignore-space-change HEAD~$commit_number HEAD~(math "$commit_number - 1") $more_args
 end
 
+abbr --add gd  "git diff --ignore-space-change --color --compaction-heuristic"
+abbr --add gs  "git status --short"
 abbr --add gch "git checkout"
+abbr --add gbk "git checkout -"
+abbr --add gcb "git checkout -b"
+abbr --add gl  "git log"
+abbr --add gbb  "git branch"
+abbr --add gds "git diff --stat"
+abbr --add gp  "git pull --rebase=preserve"
+abbr --add gf  "git fetch"
+abbr --add GP  "git push"
+abbr --add GPU "git push --set-upstream origin (git-current-branch)"
+abbr --add gst "git stash"
+abbr --add gsp "git stash pop"
+abbr --add gcur "git-current-branch"
+abbr --add glg "git log --graph --oneline --all --decorate --color | less"
+abbr --add gla "git log --graph --all --decorate --color | less"
+abbr --add gsmod "git ls-files --modified"
+abbr --add gsdel "git ls-files --deleted"
+abbr --add gsnew "git status --short | sed --silent 's/^?? //p'"
 
-complete --command gd --arguments "(complete --do-complete='git diff ')" --authoritative --exclusive
-function gds
-    git diff --stat $argv
+abbr --add vsp "rvm 2.2 @global do /usr/local/bin/vim --cmd 'let g:sonicpi_enabled = 1'"
+
+abbr --add dkr 'docker (docker-machine config)'
+
+function git-current-branch
+    git rev-parse --abbrev-ref HEAD
 end
 
-function gl
-    git log $argv
-end
-
-function gb
-    git branch $argv
-end
-
-complete --command gd --arguments "(complete --do-complete='git pull ')" --authoritative --exclusive
-function gp
-    git pull --rebase $argv
-end
-
-complete --command gd --arguments "(complete --do-complete='git fetch ')" --authoritative --exclusive
-function gf
-    git fetch $argv
-end
-
-complete --command gd --arguments "(complete --do-complete='git push ')" --authoritative --exclusive
-function GP
-    git push $argv
-end
-
-complete --command gd --arguments "(complete --do-complete='git stash ')" --authoritative --exclusive
-function gst
-    git stash $argv
-end
-
-complete --command gd --arguments "(complete --do-complete='git stash pop ')" --authoritative --exclusive
-function gsp
-    git stash pop $argv
+function jira-link-md
+    set --local jira_ticket_num (git-current-branch | cut --fields 1 --delimiter _ | cut --fields 1,2 --delimiter '-')
+    echo -n "[$jira_ticket_num](https://distil.atlassian.net/browse/$jira_ticket_num)"
 end
 
 function gme \
     --description "Edit files with merge conflicts"
     vim (git status --porcelain | sed --regexp-extended --quiet "/^UU /s/^UU //p")
+end
+
+function jira-name-to-branch-name
+    if [ -z "$argv" ]
+        echo (pbpaste)
+    else
+        echo $argv
+    end | tr '._ ' '-' | tr 'A-Z' 'a-z'
 end
 
 function gsolt \
@@ -726,28 +702,34 @@ function gsolt \
     and git push dokku master
 end
 
-function cne
-    crontab -e
-end
+abbr --add cne "crontab -e"
 
 function where --argument-names target \
   --description "Get the directory of an executable"
     dirname (which $target)
 end
 
+function toggle-nvim
+    set app_idx           (contains --index /Users/scott/apps $PATH)
+    set usr_local_bin_idx (contains --index /usr/local/bin $PATH)
+
+    set PATH[ $app_idx ]           /usr/local/bin
+    set PATH[ $usr_local_bin_idx ] /Users/scott/apps
+
+    readlink --canonicalize (which vim)
+end
+
 function gh --argument-names user repo
-    git clone "https://github.com/$user/$repo.git"
+    git clone "git@github.com:$user/$repo.git"
 end
 
 function ghcd \
   --argument-names user repo
-    git clone "https://github.com/$user/$repo.git"
+    git clone "git@github.com:$user/$repo.git"
     and cd $repo
 end
 
-function pp
-    pygmentize $argv
-end
+abbr --add pp "pygmentize"
 
 # Note: Largely from
 # http://robots.thoughtbot.com/silver-searcher-tab-completion-with-exuberant-ctags
@@ -758,7 +740,7 @@ function __s_complete_gen
 end
 
 function __s_complete_test
-    test -e local.tags
+    [ -e local.tags ]
 end
 
 function __s_cleanup --argument-names dir_hash suffix
@@ -768,12 +750,12 @@ function __s_cleanup --argument-names dir_hash suffix
 end
 
 function __s_complete
-    set dir_hash (readlink --canonicalize local.tags | md5sum | ta 1)
-    set stat_hash (stat --format '%z' local.tags | md5sum | ta 1)
+    set dir_hash (readlink --canonicalize local.tags | md5sum | cut --fields 1 --delimiter ' ')
+    set stat_hash (stat --format '%z' local.tags | md5sum | cut --fields 1 --delimiter ' ')
     set suffix tag_search_completion
     set filename "/tmp/$dir_hash.$stat_hash.$suffix"
 
-    if test -e $filename
+    if [ -e $filename ]
         cat $filename
         return 0
     end
@@ -795,12 +777,12 @@ end
 
 function ta --argument idx \
   --description "Shortcut for commonly used cut functionality"
-  cut -d ' ' -f $idx
+  cut --delimiter ' ' --fields $idx
 end
 
 function sf \
   --description "Print out filenames where pattern occurs"
-    s $argv | ta 3 | sort --unique
+    s $argv | cut --fields 3 --delimiter ' ' | sort --unique
 end
 
 function vsf \
@@ -821,8 +803,8 @@ function paj \
   --description "Paginate result chunk" \
   --argument-names increment chunk
     set startIndex (× (++ $chunk) $increment)
-    head -n $startIndex \
-    | tail -n $increment
+    head --lines $startIndex \
+    | tail --lines $increment
 end
 
 function md
@@ -839,65 +821,19 @@ function psfind \
     | grep grep --invert-match
 end
 
-function phpdoc_gen \
-  --description "Run phpdoc in current directory"
-    phpdoc -d . -t docs
-end
-
-function rspecall
-    rspec $argv
-    and rspec1.8 $argv
-    and rspec2.1
-    and jrspec1.9 $argv
-    and jrspec1.8 $argv
-    and rbx -X1.9 (which rspec) $argv
-    and rbx -X1.8 (which rspec) $argv
-end
-function mruby
-    ~/ruby/mruby/bin/mruby $argv
-end
-function mirb
-    ~/ruby/mruby/bin/mirb $argv
-end
-function mrbc
-    ~/ruby/mruby/bin/mrbc $argv
-end
-function rbx
-    ~/ruby/rubinius/bin/rbx $argv
-end
-function rbx1.9
-    ~/ruby/rubinius/bin/rbx -X1.9 $argv
-end
-function rspec1.8
-    ruby1.8 (which rspec) $argv
-end
-function rspec2.1
-    ruby2.1 (which rspec) $argv
-end
-function irb2.1
-    ruby2.1 (which irb) $argv
-end
-function jruby
-    ~/.jruby-1.7.4/bin/jruby $argv
-end
-function jruby1.9
-    ~/.jruby-1.7.4/bin/jruby --1.9 $argv
-end
-function jrspec
-    jruby (which rspec) $argv
-end
-function jrspec1.8
-    jruby --1.8 (which rspec) $argv
-end
-function jrspec1.9
-    jruby --1.9 (which rspec) $argv
-end
-function topaz
-    ~/.topaz/bin/topaz $argv
-end
-
 function bundle-bootstrap
     bundle install --shebang (which ruby) --binstubs=.bundle/bin --path .bundle/gems
+end
+
+function yaml
+    ~/dotfiles/yaml_runner.rb $argv
+end
+
+function remove_dangling_docker_images
+    set dangling_images (docker (docker-machine config) images --quiet --filter "dangling=true")
+    if count $dangling_images > /dev/null
+        docker (docker-machine config) rmi $dangling_images
+    end
 end
 
 function parallel \
@@ -924,7 +860,7 @@ function evacuate_podders \
     set current_dir (pwd)
 
     set origin /media/scott/USB30FD/podcasts
-    if not test -d $origin
+    if not [ -d $origin ]
         echo $origin not found
         return 1
     end
@@ -955,6 +891,17 @@ function mmc \
     ~/.mercury/scripts/mmc $argv
 end
 
+function factor_roots
+    set roots (cat ~/.factor-roots)
+    if [ (basename $PWD) = factor ]
+        set roots $roots $PWD
+    end
+    if [ -d ./factor ]
+        set roots $roots $PWD/factor
+    end
+    echo -ns :$roots | tail --bytes +2
+end
+
 function img \
   --description "Fake Erlang image parser"
     set current_dir (pwd)
@@ -977,6 +924,8 @@ function _f
     | grep -i $argv[1]"[^/]*\$"
 end
 
+# TODO—Use different behavior if `isatty 1` returns true...can pipe things
+# straight through if we're not printing to the shell
 function search_remember
     if not set --query SEARCH_OPEN_LIMIT
         set SEARCH_OPEN_LIMIT 20
@@ -997,13 +946,13 @@ end
 
 function __search_remember_completer_s \
   --no-scope-shadowing
-    ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head --lines $SEARCH_OPEN_LIMIT > $tmpfile
     __search_remember_close_out &
 end
 
 function __search_remember_completer_f \
   --no-scope-shadowing
-    ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
+    ag --skip-vcs-ignores -g $argv | head --lines $SEARCH_OPEN_LIMIT > $tmpfile
     __search_remember_close_out &
 end
 
@@ -1097,10 +1046,18 @@ function _gen_vs_completions
     end
 end
 
+function load-thor-completions --argument-names thor_app
+    if [ -f "$thor_app" ]
+        set thor_app "./$thor_app"
+    end
+
+    eval (eval $thor_app completions --format fish)
+end
+
 function _gen_vf_completions
     complete --command vf --erase
     set --local counterer 1
-    for file in (cat $LAST_SEARCHED_FILES | ta 1)
+    for file in (cat $LAST_SEARCHED_FILES | cut --fields 1 --delimiter ' ')
         complete --command vf --condition (__vf_complete_arg_filter_gen $counterer $file) --argument $file --description (basename $file) --no-files --authoritative
         set counterer (++ $counterer)
     end
@@ -1189,7 +1146,7 @@ function recently_searched_files
     if not set --query LAST_SEARCHED_FILES
         echo \n
     end
-    cat $LAST_SEARCHED_FILES | ta 1 | uniq
+    cat $LAST_SEARCHED_FILES | cut --fields 1 --delimiter ' ' | uniq
 end
 
 function blerg --argument-names the_royal_nergin
@@ -1248,18 +1205,24 @@ end
 # end
 
 function open_bot_windows
-    set --local teh_bots ~/codes/bots
+    set --universal teh_bots ~/codes/bots
+
     tmux new-window -c $teh_bots/reporting-bot
     tmux split-window -h -c $teh_bots/queue-bot
+    tmux split-window -h -c $teh_bots/parse-bot
+    tmux select-layout even-horizontal
+    tmux select-pane -L
     tmux select-pane -L
     tmux split-window -v -c $teh_bots/summary-bot
     tmux select-pane -R
-    tmux split-window -h -c $teh_bots/parse-bot
     tmux split-window -v -c $teh_bots/retention-bot
-    tmux select-pane -L
+    tmux select-pane -R
     tmux split-window -v -c $teh_bots/cleanup-bot
-    tmux select-pane -U
+    tmux select-pane -L
+    tmux select-pane -L
     tmux set-option synchronize-panes on
+
+    set --erase teh_bots
 end
 
 function all_bots_skiq --argument-names do_git_update
@@ -1272,9 +1235,11 @@ function all_bots_skiq --argument-names do_git_update
 end
 
 function bot_pipeline
+    tmux new-session -c ~/codes/bots -s Alp -d
     open_bot_windows
     tmux send-keys t a i l Space '-' '-' f o l l o w Space l o g '/' '*' '-'  b o t '.' l o g Enter
     all_bots_skiq $argv
+    tmux -2 -q attach -t Alp
 end
 
 function fancy_foreman \
@@ -1283,8 +1248,8 @@ function fancy_foreman \
     # How to use tail came from coderwall.com/p/6qdp5a
     ruby -e '$stdout.sync=true;$stderr.sync=true;load($0=ARGV.shift)' (which foreman) \
         $argv \
-        --procfile=(cat (pwd)'/Procfile' (echo \n'log: tail --follow '(pwd)'/log/development.log' | psub) (echo \n'sidekiq: tail --follow '(pwd)'/log/sidekiq.log' | psub) | psub) \
-        --root=(pwd)
+        --procfile=(cat "$PWD/Procfile" (echo \n"log: tail --follow $PWD/log/development.log"\n"sidekiq: tail --follow $PWD/log/sidekiq.log" | psub) | psub) \
+        --root=$PWD
 end
 
 complete --command gmd --arguments '-{l,-local}' --description 'Generate docs for locally bundled gems'
@@ -1315,6 +1280,8 @@ function gmd --argument scope \
     end
 end
 
+abbr --add rgd "rvm 2.2 @global do"
+
 function rl \
   --description "Load up rvm"
     rvm reload > /dev/null; and cd .
@@ -1332,16 +1299,17 @@ function rtags \
     end
 
     echo 'Generating combined gem ctags...'
-    ctags -R --exclude=doc{,s} --exclude=\*.tags . $gemdir
-    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=.tags .
+    ctags -R --exclude=doc{,s} --exclude=\*.tags --exclude=prototype . $gemdir
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=prototype --exclude=.tags .
 
     # So hacky  :(
     # Can't figure out how to tell rdoc to use a different file
     mv tags .global.tags
 
     echo 'Generating local ctags...'
-    ctags -R --exclude=doc{,s} --exclude=\*.tags .
-    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --force-update --exclude=.tags .
+    # rvm 2.2 @global do starscope --export=ctags,tags --exclude .js --exclude .coffee --exclude tags --exclude local.tags --exclude tmp/ --exclude log/
+    ctags -R --exclude=doc{,s} --exclude=\*.tags --exclude=prototype .
+    rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=prototype --force-update --exclude=.tags .
 
     # completion of gross hack
     mv tags local.tags
@@ -1358,7 +1326,7 @@ end
     # function skiq \
     #   --description "Startup sidekiq worker"
     # env REDIS_PORT_6379_TCP_ADDR=127.0.0.1 POSTGRES_PORT_5432_TCP_ADDR=localhost rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
-abbr --add skiq "rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose"
+abbr --add skiq "rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq --require ./main.rb --environment development --config ./config/sidekiq.yml --verbose"
     # end
 
 function swp_all \
@@ -1404,9 +1372,12 @@ function fish_debug \
     fish --interactive --debug 3 --profile $pro_file ^$log_file
 end
 
-complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
+complete --command vim --condition '[ (pwd) != "$HOME" ]' --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
+complete --command nvim --wraps vim
 # complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
-# complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
+
+# What does this even do?
+# complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | cut --delimiter \' \' --fields (count __fish_print_cmd_args))"" ^/dev/null)'
 
     if [ (uname) -a Darwin ]
 function postgres_start_server
@@ -1414,11 +1385,14 @@ function postgres_start_server
 end
     end
 
-for project in ~/codes/{prism,portal,api,database-migrations,automation-rlw} ~/codes/bots/* ~/go/src/github.com/distil/*
+for project in ~/codes/{prism,portal,api,database-migrations,automation-rlw,hannibal} ~/codes/bots/* ~/go/src/github.com/distil/*
     set --local project (echo $project | sed 's#/$##')
     echo "function "(basename $project)"
         cd $project
     end" | source
+    if functions --query addzhist
+        z --add "$project"
+    end
 end
 
 function __psql_all_db_names
@@ -1443,26 +1417,26 @@ function pcoms --argument-names dbname
 end
 
 complete --command pout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
-complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
+# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
+complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " " | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " "))' --exclusive --authoritative
 function pout --argument-names dbname schema_table
     pcoms $dbname "SELECT * FROM $schema_table"
 end
 
 complete --command pfout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
-complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
+# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | cut --fields 2 --delimiter " " | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
+complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " " | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " "))' --exclusive --authoritative
 function pfout --argument-names dbname schema_table file_name_tag
     if test -z $file_name_tag
         set file_name_tag ""
     else
         set file_name_tag "__"$file_name_tag
     end
-    set branch_name __(git branch --no-color | grep '\*' | ta 2)
+    set branch_name __(git branch --no-color | grep '\*' | cut --fields 2 --delimiter " ")
     set time_stamp __(date +'%Y-%m-%d_%I:%M:%S.%2N_%p')
     set file_name $schema_table$branch_name$file_name_tag$time_stamp".tsv"
     pout $dbname $schema_table > $file_name
@@ -1474,7 +1448,7 @@ function ls_psql_schemas --argument-names dbname
 end
 
 complete --command truncate_psql_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-complete --command truncate_psql_tables --condition 'begin; ≥ (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+complete --command truncate_psql_tables --condition 'begin; ≥ (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " " | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " "))' --exclusive --authoritative
 function truncate_psql_tables --argument-names dbname
     for schema_table in $argv[2..-1]
         __truncate_psql_table $dbname $schema_table
@@ -1487,14 +1461,18 @@ function __truncate_psql_table --argument-names dbname schema_table
     echo done.
 end
 
+function ls_psql_databases
+    psql --no-align --list --tuples-only | cut --fields 1 --delimiter '|'
+end
+
 complete --command ls_psql_schema_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
 function ls_psql_schema_tables --argument-names dbname
     pcoms $dbname "Select distinct(table_schema || '.' || table_name) from information_schema.tables where table_schema not in ('pg_catalog', 'information_schema')"
 end
 
 complete --command ls_psql_tables --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-complete --command ls_psql_tables --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
-# complete --command ls_psql_tables --condition '== (count (__fish_print_cmd_args)) 2' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
+complete --command ls_psql_tables --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " " | tr --delete " "); end' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " "))' --exclusive --authoritative
+# complete --command ls_psql_tables --condition '== (count (__fish_print_cmd_args)) 2' --arguments '(ls_psql_schemas (echo (__fish_print_cmd_args) | cut --fields 2 --delimiter " "))' --exclusive --authoritative
 function ls_psql_tables --argument-names dbname schema
     pcoms $dbname "Select table_schema || '.' || table_name from information_schema.tables where table_schema = '$schema'"
 end
@@ -1522,7 +1500,7 @@ function dump_summary_tables --argument-names file_name_tag
 end
 
 function ls_reporting_tables
-    pcoms distil_reporting "Select table_name from information_schema.tables where table_schema = 'reporting' and table_name not like '%_2%' and table_name not like 'counters'"
+    pcoms distil_reporting "Select table_name from information_schema.tables where table_schema in ('reporting', 'monthly') and table_name not like '%_2%' and table_name not like 'counters'"
 end
 
 function dump_reporting_tables --argument-names file_name_tag
@@ -1539,6 +1517,255 @@ end
 function sdiffv --argument-names f1 f2
     vimdiff (sort $f1 | psub) (sort $f2 | psub)
 end
+
+# bind --erase \cg --mode default
+# bind --erase \cg --mode completion_logging
+# bind --erase \e  --mode completion_logging
+# bind --erase --key left  --mode completion_logging
+# bind --erase --key right --mode completion_logging
+# # bind --erase --all --mode completion_logging
+# bind ''  --mode completion_logging __completion_logger self-insert
+# bind \cg --mode default --sets-mode completion_logging false
+# bind \cg --mode completion_logging --sets-mode default false
+# bind \e  --mode completion_logging --sets-mode default false
+# bind --key left  --mode completion_logging __completion_logger backward-char
+# bind --key right --mode completion_logging __completion_logger  forward-char
+# # bind --key left  --mode completion_logging __completion_logger
+# # bind --key right --mode completion_logging __completion_logger
+
+function __completion_logger
+    if set --query __COMPLETION_LOGGER_SKIP
+        return 0
+    end
+
+    set --local logfile /tmp/__completion_logger_watchfile.txt
+    if [ (count $argv) -gt 0 -a "$argv[1]" = "--watch" ]
+        if [ (count $argv) -gt 1 ]
+            echo "__comp_debug_$argv[2]"
+            complete --condition "__completion_logger" \
+                     --command "__comp_debug_$argv[2]" \
+                     --wraps "$argv[2]" \
+                     --authoritative \
+                     --exclusive
+        else
+            echo > $logfile
+            echo watching $logfile
+            watch --interval=0.1 cat $logfile
+        end
+
+        return 0
+    end
+
+    set --local current_job        (commandline --current-job)
+    set --local current_process    (commandline --current-process)
+    set --local cut_at_cursor      (commandline --cut-at-cursor)
+    set --local cursor             (commandline --cursor)
+    set --local num_cmd_words      (commandline | wc --words)
+    set --local last_token         (commandline | awk "{ print \$$num_cmd_words; }")
+    set --local current_token      (commandline --current-token)
+    set --local current_token_size (commandline --current-token | wc --bytes)
+    set --local last_cmd_char      (commandline | tail --bytes 2 | head --bytes 1)
+
+    echo > $logfile
+    echo commandline        "<<"(commandline)">>"     >> $logfile
+    echo current_job        "<<$current_job>>"        >> $logfile
+    echo current_process    "<<$current_process>>"    >> $logfile
+    echo cut_at_cursor      "<<$cut_at_cursor>>"      >> $logfile
+    echo cursor             "<<$cursor>>"             >> $logfile
+    echo num_cmd_words      "<<$num_cmd_words>>"      >> $logfile
+    echo last_token         "<<$last_token>>"         >> $logfile
+    echo current_token      "<<$current_token>>"      >> $logfile
+    echo current_token_size "<<$current_token_size>>" >> $logfile
+    echo last_cmd_char      "<<$last_cmd_char>>"      >> $logfile
+    echo completions >> $logfile
+    begin
+        set --export __COMPLETION_LOGGER_SKIP true
+        complete --do-complete=(commandline)
+        set --erase __COMPLETION_LOGGER_SKIP
+    end >> $logfile
+
+    return 0
+end
+
+function __gettys_completer
+    set address (echo "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
+Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
+But, in a larger sense, we can not dedicate -- we can not consecrate -- we can not hallow -- this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract. The world will little note, nor long remember what we say here, but it can never forget what they did here. It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced. It is rather for us to be here dedicated to the great task remaining before us -- that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion -- that we here highly resolve that these dead shall not have died in vain -- that this nation, under God, shall have a new birth of freedom -- and that government of the people, by the people, for the people, shall not perish from the earth." | tr --squeeze-repeats ' ' | tr ' ' \n)
+
+    set next_word_index (commandline --tokenize | wc --lines)
+
+    echo $address[$next_word_index]
+end
+
+complete --command gettys \
+         --no-files
+complete --command gettys \
+         --arguments "(__gettys_completer)" \
+         --authoritative \
+         --exclusive
+function gettys
+    echo "--"\nAbraham Lincoln\nNovember\ 19,\ 1863
+end
+
+function ls_lpass_dbs
+    # begin; lpass ls --sync no 'Secure Notes'; lpass ls --sync no distil; end \
+    # | sed --silent 's/^\(Secure Notes\|distil\)\/\(db-[^[ ]\+\)[ ]\+\[id: \([0-9]\+\)\]/\2'\t'\2/p'
+    lpass show --expand-multi --sync no --name --basic-regexp '/db-'
+end
+
+complete --command vimdb \
+         --condition "begin; [ (commandline | wc --words) = 1 ]; or [ (commandline | wc --words) = 2 -a (commandline --current-token | wc --bytes) -gt 1 ]; end" \
+         --arguments "(ls_lpass_dbs)" \
+         --no-files
+function vimdb --argument-names db_entry file
+    # set pg_pass_file ~/.pgpass
+    set pg_pass_file (mktemp)
+
+    chmod 0600 $pg_pass_file
+
+    if [ -e ~/.pgpass ]
+        cat ~/.pgpass > $pg_pass_file
+    end
+
+    # ensure lpass connection
+    lpass ls --sync no __NOT_A_REAL_GROUP__
+
+    set db_configs (lpass show --sync no --all "$db_entry")\n
+
+    for db_var in hostname port database username password
+        set $db_var (echo -n -s $db_configs | sed --silent "/^$db_var:/I {
+            s/^[^:]\+: *//p
+            q
+        }")
+    end
+
+    echo $hostname:$port:$database:$username:$password >> $pg_pass_file
+
+    # Some of the following is definitely overkill...was desperate to get this
+    # working.
+    env PGPASSFILE=$pg_pass_file /usr/local/bin/vim $file \
+        --cmd "let g:dbext_default_profile_PGSQL_VimDB = 'type=pgsql:host=$hostname:port=$port:dbname=$database:user=$username:passwd='"\n"let g:dbext_default_profile = 'PGSQL_VimDB'"\n"let g:dbext_default_PGSQL_pgpass = expand('$pg_pass_file')" \
+        -c "let b:dbext_profile = 'PGSQL_VimDB'"\n"let b:dbext_type='PGSQL'" \
+        -S (
+            echo -s "DBSetOption type=PGSQL"\n \
+                    "DBSetOption host=$hostname"\n \
+                    "DBSetOption user=$username"\n \
+                    "DBSetOption dbname=$database"\n \
+                    "DBSetOption port=$port"\n \
+        | psub)
+
+    rm $pg_pass_file
+
+    if [ -e $pg_pass_file.bak ]
+        mv $pg_pass_file{.bak,}
+    end
+end
+# For archival in case I decide I need it
+# function vimdb --argument-names db_entry file
+#     if [ -e ~/.pgpass ]
+#         mv ~/.pgpass{,.bak}
+#     end
+
+#     touch ~/.pgpass
+#     chmod 0600 ~/.pgpass
+
+#     # ensure lpass connection
+#     lpass ls --sync no __NOT_A_REAL_GROUP__
+
+#     set db_configs (lpass show --sync no --notes "$db_entry")\n
+
+#     # lpass show --notes "$db_entry" | awk '
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     /^Password:/ { sub(/^Password:/, ""); Password = $0 }
+#     #     END {
+#     #         print Hostname ":" Port ":" Database ":" Username ":" Password
+#     # }' > ~/.pgpass
+
+#     for db_var in hostname port database username password
+#         set $db_var (echo -n -s $db_configs | sed --silent "/^$db_var:/I {
+#             s/^[^:]\+://p
+#             q
+#         }")
+#     end
+
+#     echo $hostname:$port:$database:$username:$password > ~/.pgpass
+
+#     # echo -n -s $db_configs | awk '
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     /^Password:/ { sub(/^Password:/, ""); Password = $0 }
+#     #     END {
+#     #         print Hostname ":" Port ":" Database ":" Username ":" Password
+#     # }' > ~/.pgpass
+
+#     # vim $file -S (lpass show --notes "$db_entry" | awk '
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     END {
+#     #         print "DBSetOption type=PGSQL"
+#     #         print "DBSetOption host=" Hostname
+#     #         print "DBSetOption user=" Username
+#     #         print "DBSetOption dbname=" Database
+#     #         print "DBSetOption port=" Port
+#     # }' | psub)
+
+#     vim $file \
+#         --cmd "let g:dbext_default_profile_PGSQL_VimDB = 'type=pgsql:host=$hostname:port=$port:dbname=$database:user=$username:passwd='"\n"let g:dbext_default_profile = 'PGSQL_VimDB'" \
+#         -c "let b:dbext_profile = 'PGSQL_VimDB'"\n"let b:dbext_type='PGSQL'" \
+#         -S (
+#             echo -s "DBSetOption type=PGSQL"\n \
+#                     "DBSetOption host=$hostname"\n \
+#                     "DBSetOption user=$username"\n \
+#                     "DBSetOption dbname=$database"\n \
+#                     "DBSetOption port=$port"\n \
+#         | psub)
+
+#     # set var_cmd (lpass show --notes "$db_entry" | awk '
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     END {
+#     #         print "let g:dbext_default_profile_VimDB = \'type=pgsql:host=" Hostname ":port=" Port ":dbname=" Database ":user=" Username "\'; "     "let g:dbext_default_profile = \'VimDB\'"
+#     # }')
+#     # echo $var_cmd
+#     # vim $file --cmd "\"$var_cmd\"" -c "\"$var_cmd\""
+
+#     # Working!
+#     # vim $file --cmd "source "(lpass show --notes "$db_entry" | awk '
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     END {
+#     #         print "let g:dbext_default_profile_VimDB = \'type=pgsql:host=" Hostname ":port=" Port ":dbname=" Database ":user=" Username ":passwd=\'"
+#     #         print "let g:dbext_default_profile = \'VimDB\'"
+#     # }' | psub)
+
+#     # vim $file --cmd "let g:dbext_default_profile_VimDB = 'type=pgsql:host=$hostname:port=$port:dbname=$database:user=$username:passwd='"\n"let g:dbext_default_profile = 'VimDB'"
+
+#     #     /^Hostname:/ { sub(/^Hostname:/, ""); Hostname = $0 }
+#     #     /^Port:/     { sub(/^Port:/,     ""); Port     = $0 }
+#     #     /^Database:/ { sub(/^Database:/, ""); Database = $0 }
+#     #     /^Username:/ { sub(/^Username:/, ""); Username = $0 }
+#     #     END {
+#     #         print "let g:dbext_default_profile_VimDB = \'type=pgsql:host=" Hostname ":port=" Port ":dbname=" Database ":user=" Username ":passwd=\'"
+#     #         print "let g:dbext_default_profile = \'VimDB\'"
+#     # }' | psub)
+
+#     rm ~/.pgpass
+
+#     if [ -e ~/.pgpass.bak ]
+#         mv ~/.pgpass{.bak,}
+#     end
+# end
 
 function sudiff --argument-names f1 f2
     diff (sort $f1 | uniq | psub) (sort $f2 | uniq | psub)
@@ -1583,6 +1810,10 @@ complete --command lrk --condition '≥ (count (commandline --tokenize)) 2' --ar
 function lrk --argument-names stuff things
     set --local florb $stuff
     echo $florb
+end
+
+function follow_first_line --argument-names filename
+    ruby -e 'def clear!(entry); replacement = entry.gsub(/./, ?\s); print "\r#{replacement}\r"; end; begin; entry = old_entry = \'\'; loop { new_entry = IO.readlines("'$filename'").first; unless new_entry; sleep 0.05; next; end; old_entry = entry; entry = new_entry.chomp; unless entry == old_entry; clear!(old_entry); print entry; end; sleep 0.25 }; rescue Interrupt; exit; end'
 end
 
 # From oh-my-fish

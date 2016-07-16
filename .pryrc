@@ -1,6 +1,12 @@
 Pry.config.editor = 'vim'
 Pry.config.theme = 'twilight'
 
+# originally from http://blog.zachallett.com/pry-reload/
+def reload!
+  files = $LOADED_FEATURES.reject { |file| file =~ /rvm/ }.grep(/\A\//).grep(/\.rb\z/)
+  files.each { |file| load file }
+end
+
 def dump_session(filename = 'marshal.dump')
   IO.write(new_dump_filename(filename), Marshal.dump(instance_variables_hash))
 end
@@ -44,8 +50,26 @@ end
 def dump_filename_sort(filenames, base_filename = 'marshal.dump')
   filenames.sort_by do |filename|
     match = filename[/\A\d+(?=_#{base_filename}\z)/]
-      match ?
+    match ?
       match.to_i :
       -1
   end
+end
+
+def riak_ports(port_type = :pb)
+  port_number = case port_type
+                when :pb   then 8087
+                when :http then 8098
+                else raise ArgumentError.new("Unrecognized port type `#{port_type}'. Valid port types are :http and :pb.")
+                end
+  %x{docker ps}.each_line.map { |line| line[/(?<=:)\d+(?=->#{port_number})/] }.compact.map(&:to_i)
+end
+
+##
+# From https://github.com/hlissner/dotfiles/blob/master/pryrc
+#
+# Inspired by <http://stackoverflow.com/questions/123494/whats-your-favourite-irb-trick/123834#123834>.
+def time(repetitions = 10_000, &block)
+  require 'benchmark'
+  Benchmark.bm { |b| b.report { repetitions.times(&block) } }
 end

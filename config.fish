@@ -1,8 +1,62 @@
-if status --is-interactive
-  . ~/.config/fish/aliases.fish
+function __fish_skip_config --argument-names command
+    env __FISH_SKIP_CONFIG__=t fish --command "$command"
 end
 
-set --export PATH /usr/local/bin $PATH
+if set --query __FISH_SKIP_CONFIG__
+  exit
+end
+
+function __conditional_path_prepend --argument-names path
+  if not contains -- "$path" $PATH
+    set --export PATH "$path" $PATH
+  end
+end
+
+if status --is-interactive
+  source ~/dotfiles/__fish_complete_cd.fish
+  source ~/dotfiles/z.fish
+  source ~/.config/fish/aliases.fish
+end
+
+ulimit --file-descriptor-count 65536
+ulimit --process-count 2048
+
+function __dedup_path
+  # Ensure /usr/bin et alii are at the very end of the path
+  for path in /{usr/,}{,s}bin
+    if contains -- "$path" $PATH
+      set --export PATH $PATH "$path"
+    end
+  end
+
+  for path in $PATH
+    if [ (echo -ns $PATH\n | grep "^$path\$" --count) -gt 1 ]
+      set idx (contains --index -- "$path" $PATH)
+      set --export --erase PATH[$idx]
+    end
+  end
+end
+
+begin
+  set --local local_git_bin_idx (contains --index -- /usr/local/git/bin $PATH)
+  if [ "$local_git_bin_idx" != '' ]
+    set --erase PATH[$local_git_bin_idx]
+  end
+end
+
+if [ -e ~/.cargo/env.fish ]
+  source ~/.cargo/env.fish
+end
+
+if [ -e "$HOME/.iterm2_shell_integration.fish" ]
+  source "$HOME/.iterm2_shell_integration.fish"
+end
+
+if [ -e "$HOME/.iterm2" ]
+  __conditional_path_prepend "$HOME/.iterm2"
+end
+
+__conditional_path_prepend /usr/local/bin
 # for path_element in /usr/local/bin
 #   if not contains $path_element $PATH
 #     set --export PATH $path_element $PATH
@@ -10,19 +64,23 @@ set --export PATH /usr/local/bin $PATH
 # end
 
 if [ -e ~/dotfiles/git-custom-commands ]
-  set --export PATH ~/dotfiles/git-custom-commands $PATH
+  __conditional_path_prepend ~/dotfiles/git-custom-commands
 end
 
-set --export PATH $HOME/apps $PATH
+if [ -d ~/.cargo/bin ]
+  __conditional_path_prepend ~/.cargo/bin
+end
 
-set --export PATH /usr/local/opt/coreutils/libexec/gnubin $PATH
-set --export PATH /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin $PATH
+__conditional_path_prepend $HOME/apps
+
+__conditional_path_prepend /usr/local/opt/coreutils/libexec/gnubin
+__conditional_path_prepend /Applications/Julia-0.3.5.app/Contents/Resources/julia/bin
 # set --export NODE_PATH /usr/local/lib/node /usr/local/lib/node_modules /usr/lib/node /usr/lib/node_modules
 
 # set --export PATH ~/erlang/rebar $PATH
 # set --export PATH ~/erlang/concrete $PATH
 # set --export PATH ~/.cabal/bin $PATH
-set --export PATH ~/node_modules/.bin $PATH
+__conditional_path_prepend ~/node_modules/.bin
 # set --export PATH $HOME/.rbenv/bin $PATH
 # set --export PATH $HOME/.rbenv/shims $PATH
 # set --export PATH $HOME/ruby/mruby/bin $PATH
@@ -35,22 +93,56 @@ set --export GOPATH $HOME/go
 set --export GOBIN $HOME/go/bin
 # set --export PATH /usr/local/go/bin $PATH
 
-set --export PATH $GOBIN $PATH
+__conditional_path_prepend $GOBIN
+
+set --export RUST_SRC_PATH ~/stuffs/rust/rust/src
+__conditional_path_prepend ~/.rust/bin
 
 # set --export PATH $HOME/.luarocks/bin $PATH
 
-set --export SEARCH_OPEN_LIMIT 15
+set --export SEARCH_OPEN_LIMIT 35
 
 set --export PARINIT 'rTbgqR B=.,?_A_a Q=_s>|'
+
+if [ -d /usr/local/Cellar/neovim/HEAD/bin ]
+  __conditional_path_prepend /usr/local/Cellar/neovim/HEAD/bin
+end
+
+function fish_user_key_bindings
+    bind ! bind_bang
+    bind '$' bind_dollar
+end
+
+function bind_bang
+    switch (commandline --current-token)[-1]
+    case "!"
+        commandline --current-token $history[1]; commandline --function repaint
+    case "*"
+        commandline --insert !
+    end
+end
+
+function bind_dollar
+    switch (commandline --current-token)[-1]
+    case "!"
+        commandline --current-token ""
+        commandline --function history-token-search-backward
+    case "*"
+        commandline --insert '$'
+    end
+end
 
 if [ (uname) = Darwin ]
   set --export MANPATH /usr/local/opt/coreutils/libexec/gnuman (manpath)
   set --export MANPATH /usr/local/share/man (manpath)
   set --export MANPATH /usr/local/opt/erlang/lib/erlang/man (manpath)
+  abbr --add on-ssh 'sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist'
+  abbr --add off-ssh 'sudo launchctl unload -w /System/Library/LaunchDaemons/ssh.plist'
 end
 
 complete --command erl --old-option man --arguments '(ls /usr/local/opt/erlang/lib/erlang/man/man* | sed \'/\(man[0-9]:\|^\)$/ d; s/\.[0-9]$//\')' --authoritative --exclusive
 
+complete --command aws --no-files  --arguments '(begin; set --local --export COMP_SHELL fish; set --local --export COMP_LINE (commandline); aws_completer | sed \'s/ $//\'; end)'
 
 if which brew > /dev/null
   set --export PATH $PATH /usr/local/opt/coreutils/libexec/gnubin
@@ -64,17 +156,17 @@ function get_current_global_gem_dir
   dirname (which bundle)
 end
 
-function get_current_gem_dir
-  set --local ruby_version (cat .ruby-version | sed 's/^ruby-//')
-  set --local gemset (cat .ruby-gemset)
-  echo -n $HOME/.rvm/gems/ruby-$ruby_version@$gemset/bin
-end
+# function get_current_gem_dir
+#   set --local ruby_version (cat .ruby-version | sed 's/^ruby-//')
+#   set --local gemset (cat .ruby-gemset)
+#   echo -n $HOME/.rvm/gems/ruby-$ruby_version@$gemset/bin
+# end
 
 if [ -e ~/.rvm ]
   if begin; echo $PATH[1] | grep rvm --quiet --invert-match; end
-    set --export PATH (get_current_rvm_dir) $PATH
+    __conditional_path_prepend (get_current_rvm_dir)
     if which bundle >/dev/null ^&1
-      set --export PATH (get_current_global_gem_dir) $PATH
+      __conditional_path_prepend (get_current_global_gem_dir)
     end
     # if begin; [ -e .ruby-gemset ]; and [ -e .ruby-version ]; end
     #   set --export PATH (get_current_gem_dir) $PATH
@@ -129,7 +221,7 @@ if [ -e ~/.rvm ]
   end
   cd .
 
-  complete --command rvm --arguments '(rvm list strings)' --condition '__fish_print_cmd_args_without_options | ta 2 | grep --regexp "^use\$" --silent' --exclusive --authoritative
+  complete --command rvm --arguments '(rvm list strings; rvm alias list | sed \'s/ => /\t/\')' --condition '__fish_print_cmd_args_without_options | ta 2 | grep --regexp "^use\$" --silent' --exclusive --authoritative
   complete --command rvm --arguments '(rvm list known strings)' --condition '__fish_print_cmd_args_without_options | ta 2 | grep --regexp "^install\$" --silent' --exclusive --authoritative
 
   complete --command rvm  --condition "begin; == 1 (count (__fish_print_cmd_args_without_options)); and not contains -- --default        (__fish_print_cmd_args); end"  --long-option default         --description "with 'rvm use X', sets the default ruby for new shells to X."
@@ -258,11 +350,11 @@ end
 # end
 
 # tmux looks at $EDITOR to determine whether to use vi keys
-set --export EDITOR vi
+set --export EDITOR /usr/local/bin/vim
 
-function bundle-bootstrap
-    bundle install --binstubs=.bundle/bin path=.bundle/gems
-end
+# function bundle-bootstrap
+#     bundle install --binstubs=.bundle/bin path=.bundle/gems
+# end
 
 # Rake completion helper
 # TODO - This shouldn't be is complicated.
@@ -330,6 +422,20 @@ set -g __fish_git_prompt_color_untrackedfiles $fish_color_normal
 set -g __fish_git_prompt_color_cleanstate green --bold
 
 
+if which docker > /dev/null ^ /dev/null
+  if begin; [ (uname) = Darwin ]; which boot2docker > /dev/null ^ /dev/null; end
+    function __fish_docker_prompt
+      if begin; [ (boot2docker status) = running ]; and ls | grep --silent --ignore-case '^Dockerfile'; end
+        echo " "(docker ps --all | tail --lines +2 | wc --lines)"["(docker ps | tail --lines +2 | wc --lines)"]"
+      end
+    end
+  else
+    function __fish_docker_prompt
+      # TODO
+    end
+  end
+end
+
 function fish_prompt --description 'Write out the prompt'
 
   set -l last_status $status
@@ -344,6 +450,8 @@ function fish_prompt --description 'Write out the prompt'
   set_color normal
 
   printf '%s' (__fish_git_prompt)
+  # Meh...too slow.
+  # printf '%s' (__fish_docker_prompt)
 
   if not [ $last_status -eq 0 ]
       set_color $fish_color_error
@@ -356,4 +464,17 @@ end
 # Load rbenv automatically by adding
 # the following to ~/.config/fish/config.fish:
 
-status --is-interactive; and which rbenv > /dev/null; and . (rbenv init -|psub)
+if begin
+    status --is-interactive
+    and which rbenv >/dev/null ^/dev/null
+  end
+  source (rbenv init -|psub)
+end
+
+if which vault ^/dev/null >/dev/null
+  if [ -e ~/dotfiles/prototype/vault.fish ]
+    source ~/dotfiles/prototype/vault.fish
+  end
+end
+
+__dedup_path
