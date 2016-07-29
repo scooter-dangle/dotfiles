@@ -662,7 +662,8 @@ abbr --add GP  "git push"
 abbr --add GPU "git push --set-upstream origin (git-current-branch)"
 abbr --add gst "git stash"
 abbr --add gsp "git stash pop"
-abbr --add gcur "git-current-branch"
+abbr --add git-current-branch "git rev-parse --abbrev-ref HEAD"
+abbr --add gcur "git rev-parse --abbrev-ref HEAD"
 abbr --add glg "git log --graph --oneline --all --decorate --color | less"
 abbr --add gla "git log --graph --all --decorate --color | less"
 abbr --add gsmod "git ls-files --modified"
@@ -672,10 +673,6 @@ abbr --add gsnew "git status --short | sed --silent 's/^?? //p'"
 abbr --add vsp "rvm 2.2 @global do /usr/local/bin/vim --cmd 'let g:sonicpi_enabled = 1'"
 
 abbr --add dkr 'docker (docker-machine config)'
-
-function git-current-branch
-    git rev-parse --abbrev-ref HEAD
-end
 
 function jira-link-md
     set --local jira_ticket_num (git-current-branch | cut --fields 1 --delimiter _ | cut --fields 1,2 --delimiter '-')
@@ -1588,9 +1585,29 @@ function __completion_logger
 end
 
 function __gettys_completer
-    set address (echo "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
-Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
-But, in a larger sense, we can not dedicate -- we can not consecrate -- we can not hallow -- this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract. The world will little note, nor long remember what we say here, but it can never forget what they did here. It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced. It is rather for us to be here dedicated to the great task remaining before us -- that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion -- that we here highly resolve that these dead shall not have died in vain -- that this nation, under God, shall have a new birth of freedom -- and that government of the people, by the people, for the people, shall not perish from the earth." | tr --squeeze-repeats ' ' | tr ' ' \n)
+    set address Four score and seven years ago our fathers brought forth on this       \
+                continent, a new nation, conceived in Liberty, and dedicated to        \
+                the proposition that all men are created equal. Now we are engaged     \
+                in a great civil war, testing whether that nation, or any nation       \
+                so conceived and so dedicated, can long endure. We are met on a great  \
+                battle-field of that war. We have come to dedicate a portion of        \
+                that field, as a final resting place for those who here gave their     \
+                lives that that nation might live. It is altogether fitting and        \
+                proper that we should do this. But, in a larger sense, we can not      \
+                dedicate -- we can not consecrate -- we can not hallow -- this ground. \
+                The brave men, living and dead, who struggled here, have consecrated   \
+                it, far above our poor power to add or detract. The world will little  \
+                note, nor long remember what we say here, but it can never forget      \
+                what they did here. It is for us the living, rather, to be dedicated   \
+                here to the unfinished work which they who fought here have thus       \
+                far so nobly advanced. It is rather for us to be here dedicated        \
+                to the great task remaining before us -- that from these honored       \
+                dead we take increased devotion to that cause for which they gave      \
+                the last full measure of devotion -- that we here highly resolve       \
+                that these dead shall not have died in vain -- that this nation,       \
+                under God, shall have a new birth of freedom -- and that government    \
+                of the people, by the people, for the people, shall not perish from    \
+                the earth.
 
     set next_word_index (commandline --tokenize | wc --lines)
 
