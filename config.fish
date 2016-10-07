@@ -116,7 +116,8 @@ end
 
 set --export SEARCH_OPEN_LIMIT 35
 
-set --export PARINIT 'rTbgqR B=.,?_A_a Q=_s>|'
+# set --export PARINIT 'rTbgqR B=.,?_A_a Q=_s>|'
+set --export PARINIT 'rTbgqRw B=.,?_A_a Q=_s>|'
 
 if [ -d /usr/local/Cellar/neovim/HEAD/bin ]
   __conditional_path_prepend /usr/local/Cellar/neovim/HEAD/bin
