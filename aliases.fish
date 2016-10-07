@@ -648,23 +648,42 @@ function gdb --argument-names commit_number
     git diff --compaction-heuristic --ignore-space-change HEAD~$commit_number HEAD~(math "$commit_number - 1") $more_args
 end
 
+complete --command git-branch-delete \
+         --condition "[ -d ./.git ]" \
+         --arguments "(
+           complete --do-complete='git branch -d '
+         )" \
+         --exclusive \
+         --authoritative
+
+function git-branch-delete \
+    --argument-names branch \
+    --description "Delete branch locally and at origin"
+    git push origin :$branch
+    and git branch -d $branch
+end
+
 abbr --add gd  "git diff --ignore-space-change --color --compaction-heuristic"
 abbr --add gs  "git status --short"
 abbr --add gch "git checkout"
 abbr --add gbk "git checkout -"
-abbr --add gcb "git checkout -b"
+# abbr --add gcb "git checkout -b"
 abbr --add gl  "git log"
 abbr --add gbb  "git branch"
 abbr --add gds "git diff --stat"
 abbr --add gp  "git pull --rebase=preserve"
 abbr --add gf  "git fetch"
 abbr --add GP  "git push"
-abbr --add GPU "git push --set-upstream origin (git-current-branch)"
+abbr --add GPF  "git push --force"
+abbr --add GPU "git push --set-upstream origin (git rev-parse --abbrev-ref HEAD)"
 abbr --add gst "git stash"
 abbr --add gsp "git stash pop"
 abbr --add git-current-branch "git rev-parse --abbrev-ref HEAD"
+abbr --add gcb "git rev-parse --abbrev-ref HEAD"
 abbr --add gcur "git rev-parse --abbrev-ref HEAD"
 abbr --add glg "git log --graph --oneline --all --decorate --color | less"
+# abbr --add glw "watch --color --differences --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES'"
+abbr --add glw "watch --color --differences --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1/\"'"
 abbr --add gla "git log --graph --all --decorate --color | less"
 abbr --add gsmod "git ls-files --modified"
 abbr --add gsdel "git ls-files --deleted"
@@ -673,6 +692,18 @@ abbr --add gsnew "git status --short | sed --silent 's/^?? //p'"
 abbr --add vsp "rvm 2.2 @global do /usr/local/bin/vim --cmd 'let g:sonicpi_enabled = 1'"
 
 abbr --add dkr 'docker (docker-machine config)'
+
+
+complete --command gfwd \
+         --condition "[ -d ./.git ]" \
+         --arguments "(
+           complete --do-complete='git checkout '
+         )" \
+         --exclusive \
+         --authoritative
+function gfwd --argument-names target_commit --description "Go forward toward <target-commit> in git"
+    git checkout (git rev-list --topo-order HEAD.."$target_commit" | tail --lines 1)
+end
 
 function jira-link-md
     set --local jira_ticket_num (git-current-branch | cut --fields 1 --delimiter _ | cut --fields 1,2 --delimiter '-')
@@ -691,6 +722,42 @@ function jira-name-to-branch-name
         echo $argv
     end | tr '._ ' '-' | tr 'A-Z' 'a-z'
 end
+
+function __fish_rust_error_diagnostics_file
+    if not set --query RUST_SRC_PATH
+        set RUST_SRC_PATH ~/stuffs/rust/rust/src
+    end
+
+    echo $RUST_SRC_PATH/librustc_typeck/diagnostics.rs
+end
+
+function __fish_rust_error_diagnostics
+    cat (__fish_rust_error_diagnostics_file) | gawk '
+        BEGIN { msg = "" }
+
+        !!(err) && match($0, /^([^.]+)\./, ary) {
+            out = err "'\t'" msg ary[1]
+            print out
+            err = ""
+            msg = ""
+        }
+
+        !!(err) && msg != "" { msg = msg $0 " " }
+        !!(err) && msg == "" { msg = $0 " " }
+
+        match($0, /^(E[0-9]{4}): r#+"$/, ary) {
+            err = ary[1]
+        }
+    '
+end
+
+complete --command rustc \
+         --long-opt explain \
+         --description "Provide a detailed description of an error message" \
+         --condition "[ -e (__fish_rust_error_diagnostics_file) ]" \
+         --arguments "(__fish_rust_error_diagnostics)" \
+         --authoritative \
+         --exclusive
 
 function gsolt \
   --description "Default git push for minor tweak for soluteandsolvent.com subdomain"
