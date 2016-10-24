@@ -4,6 +4,8 @@ gem.tags
 local.tags
 .rdoc
 
+/log
+
 .starscope.db
 
 # pry file

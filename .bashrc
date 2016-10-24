@@ -146,3 +146,8 @@ PATH=$PATH:$HOME/bin
 MANPATH=$MANPATH:$HOME/share/man
 
 PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
+
+# Nix!
+if [ -e ~/.nix-profile/etc/profile.d/nix.sh ]; then
+  . ~/.nix-profile/etc/profile.d/nix.sh
+fi

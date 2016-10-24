@@ -787,7 +787,8 @@ end
 
 function ghcd \
   --argument-names user repo
-    git clone "git@github.com:$user/$repo.git"
+    # git clone "git@github.com:$user/$repo.git"
+    git clone "https://github.com/$user/$repo"
     and cd $repo
 end
 
@@ -998,7 +999,7 @@ function search_remember
 
     if == $_ s
         set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore '*.dump' --ignore docs --ignore doc --smart-case --skip-vcs-ignores --silent
-        ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
+        ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | less -R
         __search_remember_completer_s $argv &
     else if == $_ f
         ag --color --skip-vcs-ignores -g $argv | numberer_simple

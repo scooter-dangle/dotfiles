@@ -365,7 +365,12 @@ end
 # end
 
 # tmux looks at $EDITOR to determine whether to use vi keys
-set --export EDITOR /usr/local/bin/vim
+if [ -e /usr/bin/vim ]
+  set --export EDITOR /usr/bin/vim
+end
+if [ -e /usr/local/bin/vim ]
+  set --export EDITOR /usr/local/bin/vim
+end
 
 # function bundle-bootstrap
 #     bundle install --binstubs=.bundle/bin path=.bundle/gems
