@@ -1,4 +1,4 @@
-set -u aliases ~/.config/fish/aliases.fish
+set --universal aliases ~/.config/fish/aliases.fish
 
 # Tip from M Subelsky:
 function ea \
@@ -15,81 +15,9 @@ function ga \
     functions $argv | pygmentize -l bash
 end
 
-function ga_old --argument target \
-  --description 'Grep Aliases'
-	if test (grep -l "function "$target $aliases)
-        set target "function "$target
-    end
-    set matching_lines (line_number_matches $target $aliases)
-    func_blocks $matching_lines \
-    | fish_indent \
-    | __conditionally_pygmentize \
-    | __grep_highlight $target
-end
-
-function line_number_matches --argument-names target target_file
-    grep --line-number $target $target_file \
-    | sed --regexp-extended 's/^([0-9]+):.*$/\1/g'
-end
-
-function func_blocks \
-  --description "Output surrounding function blocks from "$aliases" from line numbers in argv"
-    set func_start_lines (line_number_matches '^function ' $aliases)
-    set func_end_lines   (line_number_matches '^end'       $aliases)
-
-    set out_start_lines
-    set out_end_lines
-
-    set total_matches (count $argv)
-    set i 1
-    set total_functions (count $func_start_lines)
-    set n 1
-    while begin; ≤ $n $total_functions
-             and ≤ $i $total_matches
-      end
-        if  begin; ≥ $argv[$i] $func_start_lines[$n]
-               and « $argv[$i] $func_end_lines[$n]
-            end
-            set next_index (++ (count $out_start_lines))
-            set out_start_lines[$next_index] $func_start_lines[$n]
-            set out_end_lines[$next_index]   $func_end_lines[$n]
-            set i (++ $i)
-
-            # Eat up additional grep matches for $target
-            # from the current function block (i.e., move on
-            # from any further grepped matches in this current
-            # function...we already marked this block for output)
-            while begin; ≤ $i $total_matches
-                     and ≥ $argv[$i] $out_start_lines[-1]
-                     and « $argv[$i] $out_end_lines[-1]
-                  end
-                set i (++ $i)
-            end
-        end
-        set n (++ $n)
-    end
-
-    set total_results (count $out_start_lines)
-    set m 1
-    while ≤ $m $total_results
-        cat $aliases \
-        |   head -n $out_end_lines[$m] \
-        |   tail -n (++ (— $out_end_lines[$m] $out_start_lines[$m]))
-        set m (++ $m)
-    end
-    return 0
-end
-
 function amath \
   --description "'Advanced' math (bc with math library option)"
     echo $argv | bc --mathlib
-end
-
-function floor \
-  --description 'Arithmetic floor function'
-    echo $argv \
-    | sed --regexp-extended 's/^\./0./' \
-    | sed --regexp-extended  's/^([0-9]+)\.?[0-9]*$/\\1/'
 end
 
 function digit_padding_width
@@ -109,6 +37,8 @@ function __trash --argument-names item __trash_base_dir \
     # of $TRASH where the final directory name is a number
     set TRASH ~/Trash
 
+    # echo "item: $item"\t"__trash_base_dir: $__trash_base_dir" >&2
+
     if « (count $argv) 2
         set __trash_base_dir $TRASH
         set trash_count 0
@@ -116,28 +46,58 @@ function __trash --argument-names item __trash_base_dir \
         set trash_count (++ (basename $__trash_base_dir))
     end
 
+    # echo "trash_count: $trash_count"\t"__trash_base_dir: $__trash_base_dir" >&2
+
     set orig_item $item
     set item (pwd)"/"$item
     set parent_dir (dirname $item)
     set trash_parent $__trash_base_dir$parent_dir
     set trash_item $__trash_base_dir$item
 
+    # echo "trash_parent: $trash_parent"\t"trash_item: $trash_item" >&2
+
     if test -e $trash_item
+        # echo "TRUE: test -e $trash_item" >&2
+
         if begin
                 test -f $trash_item
                 and test -f $item
                 and == (cat $item | md5sum) (cat $trash_item | md5sum)
             end
+            # echo "TRUE: begin" >&2
+
             # Current target already exists and is same as file
             # already in trash...just remove the current file
             rm $item
             echo $trash_item
+            return 0
         else
+            # echo "FALSE: begin" >&2
+
             __trash ''$orig_item'' ''$TRASH/$trash_count''
+            return $status
         end
     else
-        if not test -e $trash_parent
-            mkdir --parents $trash_parent
+        # echo "FALSE: test -e $trash_item" >&2
+
+        if test -e $trash_parent
+            # echo "TRUE: test -e $trash_parent" >&2
+
+            if not test -d $trash_parent
+                # echo "TRUE: not test -d $trash_parent" >&2
+
+                __trash ''$orig_item'' ''$TRASH/$trash_count''
+                return $status
+            end
+        else
+            # echo "FALSE: test -e $trash_parent" >&2
+
+            if not mkdir --parents $trash_parent 2> /dev/null
+                # echo "FALSE: not mkdir --parents $trash_parent 2> /dev/null" >&2
+
+                __trash ''$orig_item'' ''$TRASH/$trash_count''
+                return $status
+            end
         end
         mv $item $trash_parent/
         echo $trash_item
@@ -186,17 +146,6 @@ function make_playlist --argument-names artist_name
     end
 end
 
-function log --argument-names argument base \
-  --description 'Logarithm of 1st argument in base of 2nd argument (defaults to base 10)'
-    if == (count $argv) 1
-        set base 10
-    end
-    if != $base e
-        set denominator "/l($base)"
-    end
-    amath "l($argument)$denominator"
-end
-
 function +_2 --argument-names term1 term2
     math $term1" + "$term2
 end
@@ -229,9 +178,9 @@ function ÷
     end
 end
 
-function fact --argument-names n
-    × (… $n)
-end
+# function fact --argument-names n
+#     × (… $n)
+# end
 
 function == --argument-names leftside rightside
     return (test $leftside = $rightside)
@@ -241,58 +190,53 @@ function != --argument-names leftside rightside
     return (test $leftside != $rightside)
 end
 
-set -u alphabet a b c d e f g h i j k l m n o p q r s t u v w x y z
-set -u Alphabet A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+# function range
+#     … $argv
+# end
 
-function range
-    … $argv
-end
-
-function … \
-  --description "Numeric or alphabetic range with optional step"
-    set compare ≤
-    switch (count $argv)
-    case 1
-        set i 1
-        set n $argv[1]
-        set incr 1
-    case 2
-        set i $argv[1]
-        set n $argv[2]
-        set incr 1
-    case 3
-        set i $argv[1]
-        set n $argv[2]
-        set incr $argv[3]
-        if « $incr 0
-            set compare ≥
-        end
-    case '*'
-        return 1
-    end
-
-    if contains -- $n $alphabet
-        if == 1 $i
-            set i $alphabet[$i]
-        end
-        set source_size (count $alphabet)
-        at_all $source_size $alphabet (… (contains --index $i $alphabet) (contains --index $n $alphabet) $incr)
-        return 0
-    else if contains -- $n $Alphabet
-        if == 1 $i
-            set i $Alphabet[$i]
-        end
-        set source_size (count $Alphabet)
-        at_all $source_size $Alphabet (… (contains --index $i $Alphabet) (contains --index $n $Alphabet) $incr)
-        return 0
-    end
-
-    while eval $compare $i $n
-        echo $i
-        set i (+ $i $incr)
-    end
-    return 0
-end
+# function … \
+#   --description "Numeric or alphabetic range with optional step"
+#     set compare ≤
+#     switch (count $argv)
+#     case 1
+#         set i 1
+#         set n $argv[1]
+#         set incr 1
+#     case 2
+#         set i $argv[1]
+#         set n $argv[2]
+#         set incr 1
+#     case 3
+#         set i $argv[1]
+#         set n $argv[2]
+#         set incr $argv[3]
+#         if « $incr 0
+#             set compare ≥
+#         end
+#     case '*'
+#         return 1
+#     end
+#     if contains -- $n $alphabet
+#         if == 1 $i
+#             set i $alphabet[$i]
+#         end
+#         set source_size (count $alphabet)
+#         at_all $source_size $alphabet (… (contains --index $i $alphabet) (contains --index $n $alphabet) $incr)
+#         return 0
+#     else if contains -- $n $Alphabet
+#         if == 1 $i
+#             set i $Alphabet[$i]
+#         end
+#         set source_size (count $Alphabet)
+#         at_all $source_size $Alphabet (… (contains --index $i $Alphabet) (contains --index $n $Alphabet) $incr)
+#         return 0
+#     end
+#     while eval $compare $i $n
+#         echo $i
+#         set i (+ $i $incr)
+#     end
+#     return 0
+# end
 
 function at
     set index $argv[-1]
@@ -395,68 +339,6 @@ function ≥ --argument-names left_side right_side
     return (test $left_side -ge $right_side)
 end
 
-function anon --argument-names cmd
-    set i 2
-    set total (count $argv)
-    while ≤ $i $total
-        set regex 's/\<A('(decrement $i)')\>/'$argv[$i]'/g'
-        set cmd (echo $cmd | sed --regexp-extended $regex)
-        set i (++ $i)
-    end
-
-    # Allow nested anonymous functions
-    set regex 's/\<Aa(a*[0-9]+)\>/A\1/g'
-    set cmd (echo $cmd | sed --regexp-extended $regex)
-
-    eval $cmd
-end
-
-function £
-    # Broken  :(
-    set -l clean_args (echo $argv | quote-escape)
-    echo '\'anon \\\\\\\''$clean_args'\\\\\\\'\''
-end
-
-function quote-escape
-    # Doesn't work so well  :(
-    sed --regexp-extended \
-        --expression "s_((\\\\)+)_\\1\\1\\1\\1_g" \
-        --expression "s_([^\\\\]?)(')_\\1\\\\\\\\\\\\\\\\\\\\\\2_g"
-end
-
-function quote-unescape
-    # Pointless/doesn't work... see preceding function
-    sed --expression s/\\\\\'/\'/g
-end
-
-function al
-    pp_fish_aliases $aliases \
-    | __conditionally_pygmentize \
-    | more
-end
-
-function pp_fish_aliases --argument-names target
-    # helper
-    sed -ue "s/\([^)]\);\s*/\1\n/g" $target \
-    | fish_indent
-end
-
-function prettify_aliases \
-  --description "Prettifies contents of aliases.fish"
-    # helper
-    pp_fish_aliases $aliases >  $aliases
-end
-
-function __conditionally_pygmentize --argument-names target \
-  --description "Runs argument through pygmentize -lbash only if pygmentize can be found"
-    # helper
-    if test (which pygmentize)
-        pygmentize -lbash $target
-    else
-        cat $target
-    end
-end
-
 function __grep_highlight --argument-names target
     # helper
     while read line
@@ -468,22 +350,6 @@ function __grep_highlight --argument-names target
         end
     end
     return 0
-end
-
-function up
-    cd ..
-end
-
-function bk
-    prevd $argv
-end
-
-function fd
-    nextd $argv
-end
-
-function hm
-    cd ~
 end
 
 function pwdd --argument-names prev_path_fragment new_path_fragment \
@@ -522,104 +388,186 @@ function bx
     bundle exec $argv
 end
 
-function rsh
-    pry --require rake
-end
-
-function in_git_repo
-    gs ^ /dev/null
-end
-
-function git-recent \
-  --description "Show recent activity by on all branches"
+function git-branch-activity
     # From
     # http://stackoverflow.com/questions/11135052/how-to-list-only-active-recently-changed-branches-in-git
-    reverse ( git for-each-ref --sort=-committerdate --format='%(committerdate:short) %(refname)' refs/heads refs/remotes )
+    git for-each-ref --format='%(committerdate:short) %(refname)' refs/heads refs/remotes | sort
 end
 
-function gs
-    git status -s $argv
+function git-recent --description "Show recent activity on all branches"
+    git-branch-activity | tail --lines 20
 end
 
-function gd
-    git diff -b --color --ignore-all-space $argv
+complete --command git-branch-delete \
+         --condition "[ -d ./.git ]" \
+         --arguments "(
+           complete --do-complete='git branch -d ' | remove_if_in_commandline
+         )" \
+         --exclusive \
+         --authoritative
+
+function git-branch-delete \
+    --argument-names branch \
+    --description "Delete branch locally and at origin"
+    git push origin --delete $branch
+    and git branch --delete $branch
 end
 
-function gl
-    git log $argv
+abbr --add lolwut "watch --no-title --precise --color --interval 1 -- bash (echo 'redis-cli lolwut version 6 \$COLUMNS \$LINES | head --lines \"-2\"' | psub)"
+abbr --add bk prevd
+abbr --add fw nextd
+abbr --add up 'cd ..'
+abbr --add hm 'cd ~'
+# abbr --add enw 'env (cat ../configs/test.env | tr --squeeze-repeats \n)'
+
+abbr --add xx 'env (cat .env) rbenv exec bundle exec'
+
+abbr --add gd  "git diff --ignore-space-change --relative --color --indent-heuristic"
+abbr --add gdf 'git diff --ignore-space-change --relative --indent-heuristic --name-only'
+abbr --add gds "git diff --ignore-space-change --relative --color --indent-heuristic --stat"
+abbr --add gs  "git status --short ."
+abbr --add gch "git checkout"
+abbr --add gco "git commit"
+abbr --add gl  "git log"
+abbr --add gbb  "git branch"
+
+abbr --add gf  "git fetch"
+abbr --add GP  "git push"
+abbr --add GPF  "git push --force-with-lease"
+abbr --add gp  "git pull --rebase --autostash"
+abbr --add gdb "git diff --ignore-space-change --color --indent-heuristic --relative HEAD{~,}"
+abbr --add gbk "git checkout -"
+abbr --add GPU "git push --set-upstream origin (git rev-parse --abbrev-ref HEAD)"
+switch (uname)
+case "Darwin"
+    abbr --add GPUP "git push --set-upstream origin (git rev-parse --abbrev-ref HEAD); and open (git remote get-url origin | sed 's/\.git\$//')/pull/new/(git rev-parse --abbrev-ref HEAD | tr -d \n)"
+case "Linux"
+    abbr --add GPUP "git push --set-upstream origin (git rev-parse --abbrev-ref HEAD); and echo (git remote get-url origin | sed 's/\.git\$//')/pull/new/(git rev-parse --abbrev-ref HEAD | tr --delete \n) | xclip -selection clipboard"
 end
 
-function gb
-    git branch $argv
-end
+abbr --add gst "git stash"
+abbr --add gsp "git stash pop"
+abbr --add git-current-branch "git rev-parse --abbrev-ref HEAD"
+abbr --add gcb "git rev-parse --abbrev-ref HEAD | tr --delete \n"
+abbr --add gcur "git rev-parse --abbrev-ref HEAD | tr --delete \n"
+abbr --add gbc "git merge-base HEAD"
+abbr --add glg "git log --graph --oneline --all --decorate --color"
+# abbr --add glw "watch --color --differences --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
+abbr --add glw "watch --color --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
+abbr --add gla "git log --graph --all --decorate --color"
+abbr --add gsmod "git ls-files --modified"
+abbr --add gsdel "git ls-files --deleted"
+abbr --add gsnew "git status --short | sed --silent 's/^?? //p'"
+abbr --add gsconfl "git status --short | sed --silent --regexp-extended 's/^(UA|UU|AU|AA) //p'"
+abbr --add grpo "git remote prune origin"
+abbr --add gmb  "git merge-base HEAD master"
+abbr --add gother "git ls-files --others --exclude-standard --directory --no-empty-directory --error-unmatch -- '*'"
+abbr --add gmenv "env (git log --max-count=1 --format=GIT_AUTHOR_NAME=\"'%an'\"\nGIT_AUTHOR_EMAIL=\"'%ae'\"\nGIT_AUTHOR_DATE=\"'%ad'\"\nGIT_COMMITTER_NAME=\"'%cn'\"\nGIT_COMMITTER_EMAIL=\"'%ce'\"\nGIT_COMMITTER_DATE=\"'%cd'\")"
 
-function gp
-    git pull --rebase $argv
-end
+abbr --add gsubdir "string replace (git rev-parse --show-toplevel)/ '' \$PWD/"
 
-function gf
-    git fetch $argv
-end
+abbr --add sshas "ssh-agent -s | sed 's/; /\n/' | tr --delete ';' | rg --invert-match 'export|echo' | sed --regexp-extended 's/^(.*)\=(.*)\$/set --export \1 \2/' | source"
 
-function GP
-    git push $argv
-end
+abbr --add iso8601 "date +'%FT%T%z' --utc"
+abbr --add wordlet "pst | sed 's/🟩/🌄/g' | sed 's/🟨/💡/g' | sed 's/⬛/🌃/g' | cpy"
 
-function gsolt \
-  --description "Default git push for minor tweak for soluteandsolvent.com subdomain"
-    git commit --all --message $argv
-    and git push origin master
-    and git push dokku master
-end
+# V.P.N. C.onnect
+abbr --add vpnc "openvpn3 session-start --config="
+# V.P.N. D.isconnect
+abbr --add vpnd "openvpn3 session-manage --disconnect --path=/net/openvpn/v3/sessions/"
 
-function cne
-    crontab -e
-end
+# Common usage of terraform init
+abbr --add tinit "terraform init -backend-config=../backend-config.tfvars"
 
-function where --argument-names target \
-  --description "Get the directory of an executable"
-    dirname (which $target)
-end
-
-function gh --argument-names user repo
+function ghc --argument-names user repo
     git clone "https://github.com/$user/$repo.git"
 end
 
 function ghcd \
   --argument-names user repo
-    git clone "https://github.com/$user/$repo.git"
+    git clone --recurse-submodule \
+        "https://github.com/$user/$repo.git"
     and cd $repo
 end
 
-function pp
-    pygmentize $argv
+function ta --argument idx \
+  --description "Shortcut for commonly used cut functionality"
+  cut -d ' ' -f $idx
 end
 
+function l \
+  --description "Grab a particular line from file or pipe" \
+  --argument-names target
+    sed (+ $target '-1')"p" --quiet
+end
+
+### BEGIN SEARCH SECTION
 # Note: Largely from
 # http://robots.thoughtbot.com/silver-searcher-tab-completion-with-exuberant-ctags
+
+function __s_tag_files
+    set tag_files
+
+    if [ -f tags ]
+        set tag_files tags
+    end
+
+    if bash -c 'compgen -G */tags > /dev/null'
+        set tag_files $tag_files (ls -1 */tags | sort)
+    end
+
+    echo -ns $tag_files\n
+end
+
 function __s_complete_gen
-    cut --fields 1 local.tags ^/dev/null \
-    | grep --invert-match '!_TAG' \
-    | uniq
+    set pwd_length (echo -ns "$PWD" | wc -c)
+    set follow_on_dir_start (math "$pwd_length + 2")
+
+    set tag_files (__s_tag_files)
+
+    if [ -z "$tag_files" ]
+        return 1
+    end
+
+    # print non meta lines that are for files in the current directory (either
+    # include PWD as substring in path or are local relative paths)
+    sed '/^!_TAG/d' $tag_files \
+    | awk -F \t 'substr($2, 0, '$pwd_length') == "'$PWD'" || $2 ~ /^[^/]/ { print $1 "\t" substr($2, '$follow_on_dir_start') }'
+
+    # cat tags \
+    # | grep -F $PWD ^/dev/null \
+    # | cut -f 1 ^/dev/null \
+    # | grep -v '!_TAG' \
+    # | uniq
 end
 
 function __s_complete_test
-    test -e local.tags
+    # [ -e local.tags ]
+    [ -e tags ] || bash -c 'compgen -G */tags > /dev/null'
 end
 
 function __s_cleanup --argument-names dir_hash suffix
-    for stale_file in (ls /tmp/ | grep $dir_hash)
-        rm /tmp/$stale_file
-    end
+    # for stale_file in (ls /tmp/ | grep $dir_hash)
+    #     rm /tmp/$stale_file
+    # end
+    rm -f (ls /tmp/ | grep $dir_hash | grep tag_search_completion)
 end
 
 function __s_complete
-    set dir_hash (readlink --canonicalize local.tags | md5sum | ta 1)
-    set stat_hash (stat --format '%z' local.tags | md5sum | ta 1)
+    set tag_files (__s_tag_files)
+
+    # set dir_hash (readlink --canonicalize local.tags | md5sum | cut --fields 1 --delimiter ' ')
+    # set dir_hash (readlink -f $tag_files | md5sum | cut -f 1 -d ' ')
+    set dir_hash (echo -ns "$PWD" | md5sum | cut -f 1 -d ' ')
+
+    # set stat_hash (stat --format '%z' local.tags | md5sum | cut --fields 1 --delimiter ' ')
+    # TODO: Not sure how to use `stat` in a Gnu vs BSD neutral way
+    # set stat_hash (stat --format '%z' local.tags | md5sum | cut -f 1 -d ' ')
+    set stat_hash (stat -c '%z' $tag_files | md5sum | cut -f 1 -d ' ')
     set suffix tag_search_completion
     set filename "/tmp/$dir_hash.$stat_hash.$suffix"
 
-    if test -e $filename
+    if [ -e $filename ]
         cat $filename
         return 0
     end
@@ -632,41 +580,346 @@ end
 complete --command s --exclusive --condition "__s_complete_test" --arguments "(__s_complete)" --authoritative
 function s \
   --description "Find the given argument in any file within the current directory or its subdirectories"
-    search_remember $argv
+    echo "argv: $argv" >> /tmp/search.log
+    search_remember s $argv
 end
 
 function _s
     ag $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/'
 end
 
-function ta --argument idx \
-  --description "Shortcut for commonly used cut functionality"
-  cut -d ' ' -f $idx
-end
-
-function sf \
-  --description "Print out filenames where pattern occurs"
-    s $argv | ta 3 | sort --unique
-end
-
-function vsf \
-  --description 'Because vim (sf $argv) takes too long'
-    vim (sf $argv) +/$argv[1]
-end
-
 function l \
-  --description "Grab a particular line from file or pipe" \
-  --argument-names target
-    sed (+ $target '-1')"p" --quiet
+  --description "Grab a range of lines from file or pipe" \
+  --argument-names range_start range_stop
+    if [ -z "$range_stop" ]
+        set range_stop $range_start
+    end
+    sed $range_start,$range_stop'p;'$range_stop'q' --silent
 end
 
-function paj \
-  --description "Paginate result chunk" \
-  --argument-names increment chunk
-    set startIndex (× (++ $chunk) $increment)
-    head -n $startIndex \
-    | tail -n $increment
+# complete --command f --arguments  "(ag -g '.*'  | tr '/.' \"\n\" | sort --unique)" --exclusive --authoritative
+complete --command f --arguments  "(fd --strip-cwd-prefix --max-depth 7 '.*' ^/dev/null | tr '/.' \"\n\" | sort -u)" --exclusive --authoritative
+function f \
+  --description "Find files with the given argument in their name in the current directory or its subdirectories"
+    search_remember f $argv
 end
+
+# TODO—Use different behavior if `isatty 1` returns true...can pipe things
+# straight through if we're not printing to the shell
+function search_remember
+    echo "search_remember argv: $argv"  >> /tmp/search.log
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 80
+    end
+    set --local mode $argv[1]
+    set --local search_term $argv[2]
+
+    # set --local tmpfile (mktemp --suffix _last_searched_files)
+    set --local tmpfile (mktemp -t last_searched_files__XXXXXXXXXXXX)
+
+    echo "tmpfile: $tmpfile"  >> /tmp/search.log
+
+    switch (uname)
+    case "Darwin"
+        set more_opts more "-R"
+    case "Linux"
+        set more_opts less \
+            --no-init \
+            --quit-on-intr \
+            --quit-at-eof \
+            --quit-if-one-screen \
+            --raw-control-chars
+    end
+
+    echo "more_opts: $more_opts"  >> /tmp/search.log
+
+    if [ "$mode" = s ]
+        rg \
+            --max-count 5 \
+            --color always \
+            --heading \
+            --line-number \
+            --before-context 1 \
+            --after-context 1 \
+            --smart-case \
+            $argv[2..-1] \
+        | tee --append /tmp/search.log \
+        | numberer \
+        $more_opts
+        # | command $more_opts
+        __search_remember_completer_s $argv[2..-1] &
+    else if [ "$mode" = f ]
+        fd \
+            --strip-cwd-prefix \
+            --color always \
+            $argv[2..-1] \
+        | numberer_simple \
+        $more_opts
+        # | command $more_opts
+        __search_remember_completer_f $argv[2..-1] &
+    end
+end
+
+function __search_remember_completer_s \
+  --no-scope-shadowing
+    rg --smart-case --max-count 1 --line-number $argv \
+    | sed -r 's/^([^:]+):([0-9]+) ?(.*)$/\1 +\2 #\3/' \
+    | head -n $SEARCH_OPEN_LIMIT \
+    > $tmpfile
+    __search_remember_close_out &
+end
+
+function __search_remember_completer_f \
+  --no-scope-shadowing
+    fd --strip-cwd-prefix $argv \
+    | head -n $SEARCH_OPEN_LIMIT \
+    > $tmpfile
+    __search_remember_close_out &
+end
+
+function __search_remember_close_out \
+  --no-scope-shadowing
+    if test -s $tmpfile
+        set --global LAST_SEARCH_TERM $search_term
+        if [ -f "$LAST_SEARCHED_FILES" ]
+            rm $LAST_SEARCHED_FILES
+        end
+
+        set --global LAST_SEARCHED_FILES $tmpfile
+
+        _gen_vs_completions
+        _gen_vf_completions
+    end
+end
+
+# Trouble getting the following to work when using dollar
+# sign to indicate end of range
+# function __vs_complete_allows --argument-names target element
+#     set target (echo "$target" | sed --regexp-extended 's/\$/$/g')
+#     not contains $element (seq $element | sed --quiet "$target p")
+# end
+function __vs_complete_allows --argument-names target element
+    if [ "$target" = "$element" ]
+        return (false)
+    end
+
+    # if begin; echo $target | grep --quiet ,; end
+    if begin; echo $target | grep -q ,; end
+        # set --local lower (echo $target | cut --fields 1 --delimiter ',')
+        set --local lower (echo $target | cut -f 1 -d ',')
+        # set --local upper (echo $target | cut --fields 2 --delimiter ',')
+        set --local upper (echo $target | cut -f 2 -d ',')
+
+        if [ "$lower" = '.' ]
+            set lower 0
+        end
+
+        if [ "$upper" = \$ ]
+            set upper (math "1 + $element")
+        end
+
+        # if begin; echo $upper | grep --quiet +; end
+        if begin; echo $upper | grep -q +; end
+            # set --local tmp_upper (echo $upper | cut --fields 2 --delimiter +)
+            set --local tmp_upper (echo $upper | cut -f 2 -d +)
+            if test -z $tmp_upper
+                set tmp_upper 0
+            end
+            set upper (math "$lower + $tmp_upper")
+        end
+
+        if [ \( "$element" -ge "$lower" \) -a \( "$element" -le "$upper" \) ]
+            return (false)
+        end
+    end
+
+    return (true)
+end
+
+function __vs_complete_arg_filter_gen --argument-names counter
+    # source (echo 'function __vs_complete_arg_filter_'$counter'; set current_args (__fish_print_cmd_args) ; if ≥ (count $current_args) 2 ; for arg in $current_args[2..-1] ; if not __vs_complete_allows $arg '$counter' ; return (false) ; end ; end ; end ; return (true) ; end' | psub)
+    eval '
+        function __vs_complete_arg_filter_'$counter'
+            set current_args (__fish_print_cmd_args)
+            if [ (count $current_args) -ge 2 ]
+                for arg in $current_args[2..-1]
+                    if not __vs_complete_allows $arg '$counter'
+                        return (false)
+                    end
+                end
+            end
+            return (true)
+        end
+    '
+    echo __vs_complete_arg_filter_$counter
+end
+
+function __vf_complete_arg_filter_gen --argument-names counter path
+    set --local escaped_path (string escape "$path")
+    eval '
+        function __vf_complete_arg_filter_'$counter'
+            not contains '$escaped_path' (__fish_print_cmd_args | tail -n +2)
+        end
+    '
+    echo __vf_complete_arg_filter_$counter
+end
+
+function vs
+    if [ '0' = (count $argv) ]
+        set files (recently_searched_files)
+    else
+        set files (recently_searched_files | get_lines $argv)
+    end
+    # vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+    vim $files +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+# why not include both vs and vf? vs for select and vf for file?
+function vf
+    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
+end
+
+function _gen_vs_completions
+    complete --command vs --erase
+    set --local counterer 1
+    for match in (cat $LAST_SEARCHED_FILES)
+        complete \
+            --command vs \
+            --condition (__vs_complete_arg_filter_gen $counterer) \
+            --argument $counterer \
+            --description ''$match'' \
+            --no-files \
+            --authoritative
+        set counterer (math "1 + $counterer")
+    end
+end
+
+# Orig
+#
+# Didn't include the 'description' of the search findings like the
+# modified version does.
+#
+# function _gen_vf_completions
+#     complete --command vf --erase
+#     set --local counterer 1
+#     # for file in (cat $LAST_SEARCHED_FILES | cut --fields 1 --delimiter ' ')
+#     for file in (cat $LAST_SEARCHED_FILES | cut -f 1 -d ' ')
+#         complete --command vf --condition ( \
+#             __vf_complete_arg_filter_gen $counterer $file \
+#         ) --argument (string escape $file) --description (basename $file) --no-files --authoritative
+#         set counterer (math "1 + $counterer")
+#     end
+# end
+
+function _gen_vf_completions
+    complete --command vf --erase
+    set --local counterer 1
+    # for file in (cat $LAST_SEARCHED_FILES | cut --fields 1 --delimiter ' ')
+    for match in (cat $LAST_SEARCHED_FILES)
+        echo -ns $match | read --local --delimiter=' ' file desc
+        complete --command vf --condition ( \
+            __vf_complete_arg_filter_gen $counterer $file \
+        ) --argument (string escape $file) --description "$desc" --no-files
+        set counterer (math "1 + $counterer")
+    end
+end
+
+function numberer_simple
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 80
+    end
+
+    # set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
+    set --local counter_padded_size (echo "length($SEARCH_OPEN_LIMIT)" | bc -l)
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+
+    set --local counter 1
+
+    while read line
+        if [ "$counter" -le "$SEARCH_OPEN_LIMIT" ]
+            set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+            set counter (math "1 + $counter")
+        else
+            set counter_string "$counter_finished "
+        end
+        echo $counter_string$line
+    end
+end
+
+function numberer
+    if not set --query SEARCH_OPEN_LIMIT
+        set SEARCH_OPEN_LIMIT 80
+    end
+    echo "SEARCH_OPEN_LIMIT: $SEARCH_OPEN_LIMIT" >> /tmp/search.log
+
+    # set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
+    set --local counter_padded_size (echo "length($SEARCH_OPEN_LIMIT)" | bc -l)
+    echo "counter_padded_size: $counter_padded_size" >> /tmp/search.log
+    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
+    echo "counter_finished: $counter_finished" >> /tmp/search.log
+
+    set --local blank true
+    set --local counter 1
+
+    echo "counter: $counter" >> /tmp/search.log
+
+    while read line
+        echo "line: $line" >> /tmp/search.log
+        if [ "$counter" -le "$SEARCH_OPEN_LIMIT" ]
+            if eval $blank
+                if not test -z $line
+                    set counter_string (printf '%-'$counter_padded_size'i ' $counter)
+                    set counter (math "1 + $counter")
+                    set blank false
+                end
+            else
+                if not test -z $line
+                    set counter_string "$counter_finished "
+                else
+                    set blank true
+                end
+            end
+        else
+            if not test -z $line
+                set counter_string "$counter_finished "
+            else
+                set counter_string ''
+            end
+        end
+        echo $counter_string$line
+    end
+end
+
+function get_lines
+    if [ 1 = (count $argv) ]
+        # sed --quiet ''$argv[1]'p'
+        sed -n ''$argv[1]'p'
+    else
+        # set --local get_lines_file (mktemp --suffix _get_lines_helper)
+        set --local get_lines_file (mktemp -t get_lines_helper__XXXXXXXXXXXX)
+
+        while read line
+            echo $line >> $get_lines_file
+        end
+
+        for specifier in $argv
+            # cat $get_lines_file | sed --quiet ''$specifier'p'
+            cat $get_lines_file | sed -n ''$specifier'p'
+        end
+        rm $get_lines_file
+    end
+end
+
+function recently_searched_files
+    if not set --query LAST_SEARCHED_FILES
+        echo \n
+    end
+    # cat $LAST_SEARCHED_FILES | cut --fields 1 --delimiter ' ' | uniq
+    cat $LAST_SEARCHED_FILES \
+    | cut -f 1 -d ' ' \
+    | uniq
+end
+### END SEARCH SECTION
 
 function md
     mkdir --parents $argv[1]
@@ -687,61 +940,12 @@ function phpdoc_gen \
     phpdoc -d . -t docs
 end
 
-function rspecall
-    rspec $argv
-    and rspec1.8 $argv
-    and rspec2.1
-    and jrspec1.9 $argv
-    and jrspec1.8 $argv
-    and rbx -X1.9 (which rspec) $argv
-    and rbx -X1.8 (which rspec) $argv
-end
-function mruby
-    ~/ruby/mruby/bin/mruby $argv
-end
-function mirb
-    ~/ruby/mruby/bin/mirb $argv
-end
-function mrbc
-    ~/ruby/mruby/bin/mrbc $argv
-end
-function rbx
-    ~/ruby/rubinius/bin/rbx $argv
-end
-function rbx1.9
-    ~/ruby/rubinius/bin/rbx -X1.9 $argv
-end
-function rspec1.8
-    ruby1.8 (which rspec) $argv
-end
-function rspec2.1
-    ruby2.1 (which rspec) $argv
-end
-function irb2.1
-    ruby2.1 (which irb) $argv
-end
-function jruby
-    ~/.jruby-1.7.4/bin/jruby $argv
-end
-function jruby1.9
-    ~/.jruby-1.7.4/bin/jruby --1.9 $argv
-end
-function jrspec
-    jruby (which rspec) $argv
-end
-function jrspec1.8
-    jruby --1.8 (which rspec) $argv
-end
-function jrspec1.9
-    jruby --1.9 (which rspec) $argv
-end
-function topaz
-    ~/.topaz/bin/topaz $argv
-end
-
 function bundle-bootstrap
     bundle install --shebang (which ruby) --binstubs=.bundle/bin --path .bundle/gems
 end
+
+abbr --add rx "rbenv exec"
+abbr --add rxb "rbenv exec bundle exec"
 
 function parallel \
   --description "Provide POSIX shell to Gnu parallel"
@@ -793,248 +997,6 @@ function uname \
     | sed 's/GNU\/Linux/Linux/g'
 end
 
-function mmc \
-  --description "Mercury Compiler, version 14.01"
-    ~/.mercury/scripts/mmc $argv
-end
-
-function img \
-  --description "Fake Erlang image parser"
-    set current_dir (pwd)
-    bk
-    set prev_dir (pwd)
-    cd ~/erlang/voroni
-    ./img.escript $argv
-    cd $prev_dir
-    cd $current_dir
-end
-
-complete --command f --arguments  "(ag -g '.*'  | tr '/.' \"\n\" | sort --unique)" --exclusive --authoritative
-function f \
-  --description "Find files with the given argument in their name in the current directory or its subdirectories"
-    search_remember $argv
-end
-
-function _f
-    find . $argv[1] ^ /dev/null \
-    | grep -i $argv[1]"[^/]*\$"
-end
-
-function search_remember
-    if not set --query SEARCH_OPEN_LIMIT
-        set SEARCH_OPEN_LIMIT 20
-    end
-    set --local search_term $argv[1]
-
-    set --local tmpfile (mktemp --suffix _last_searched_files)
-
-    if == $_ s
-        set --local s_opts --ignore tags --ignore log --ignore local.tags --ignore .min.js --ignore docs --ignore doc --smart-case --skip-vcs-ignores --silent
-        ag --max-count 5 --{color,head,break,group} --context=1 --before=1 $s_opts $argv | numberer | more -R
-        __search_remember_completer_s $argv &
-    else if == $_ f
-        ag --color --skip-vcs-ignores -g $argv | numberer_simple
-        __search_remember_completer_f $argv &
-    end
-end
-
-function __search_remember_completer_s \
-  --no-scope-shadowing
-    ag --max-count 1 $s_opts $argv | sed --regexp-extended 's/^([^:]+):([0-9]+):/\1 \2/' | head -n $SEARCH_OPEN_LIMIT > $tmpfile
-    __search_remember_close_out &
-end
-
-function __search_remember_completer_f \
-  --no-scope-shadowing
-    ag --skip-vcs-ignores -g $argv | head -n $SEARCH_OPEN_LIMIT > $tmpfile
-    __search_remember_close_out &
-end
-
-function __search_remember_close_out \
-  --no-scope-shadowing
-    if test -s $tmpfile
-        set --global LAST_SEARCH_TERM $search_term
-        if begin
-            set --query LAST_SEARCHED_FILES
-            and test -f $LAST_SEARCHED_FILES
-        end
-            rm $LAST_SEARCHED_FILES
-        end
-
-        set --global LAST_SEARCHED_FILES $tmpfile
-
-        _gen_vs_completions
-        _gen_vf_completions
-    end
-end
-
-# Trouble getting the following to work when using dollar
-# sign to indicate end of range
-# function __vs_complete_allows --argument-names target element
-#     set target (echo "$target" | sed --regexp-extended 's/\$/$/g')
-#     not contains $element (seq $element | sed --quiet "$target p")
-# end
-function __vs_complete_allows --argument-names target element
-    if == $target $element
-        return (false)
-    end
-
-    if begin; echo $target | grep --quiet ,; end
-        set --local lower (echo $target | cut --fields 1 --delimiter ',')
-        set --local upper (echo $target | cut --fields 2 --delimiter ',')
-
-        if == $lower '.'
-            set lower 0
-        end
-
-        if == $upper \\\$
-            set upper (++ $element)
-        end
-
-        if begin; echo $upper | grep --quiet +; end
-            set --local tmp_upper (echo $upper | cut --fields 2 --delimiter +)
-            if test -z $tmp_upper
-                set tmp_upper 0
-            end
-            set upper (+ $lower $tmp_upper)
-        end
-
-        if begin; ≥ $element $lower; and ≤ $element $upper; end
-            return (false)
-        end
-    end
-
-    return (true)
-end
-
-function __vs_complete_arg_filter_gen --argument-names counter
-    . (echo 'function __vs_complete_arg_filter_'$counter'; set current_args (__fish_print_cmd_args) ; if ≥ (count $current_args) 2 ; for arg in $current_args[2..-1] ; if not __vs_complete_allows $arg '$counter' ; return (false) ; end ; end ; end ; return (true) ; end' | psub)
-    echo __vs_complete_arg_filter_$counter
-end
-
-function __vf_complete_arg_filter_gen --argument-names counter path
-    . (echo 'function __vf_complete_arg_filter_'$counter'; if contains "'$path'" (__fish_print_cmd_args | sed "s/^vf //"); return (false); else; return (true); end; end' | psub)
-    echo __vf_complete_arg_filter_$counter
-end
-
-function vs
-    if == 0 (count $argv)
-        set files (recently_searched_files)
-    else
-        set files (recently_searched_files | get_lines $argv)
-    end
-    vim $files +"Ag $LAST_SEARCH_TERM $files" +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
-end
-
-# why not include both vs and vf? vs for select and vf for file?
-function vf
-    vim $argv +"let @/ = '$LAST_SEARCH_TERM'" +"set hlsearch"
-end
-
-function _gen_vs_completions
-    complete --command vs --erase
-    set --local counterer 1
-    for match in (cat $LAST_SEARCHED_FILES)
-        complete --command vs --condition (__vs_complete_arg_filter_gen $counterer) --argument $counterer --description ''$match'' --no-files --authoritative
-        set counterer (++ $counterer)
-    end
-end
-
-function _gen_vf_completions
-    complete --command vf --erase
-    set --local counterer 1
-    for file in (cat $LAST_SEARCHED_FILES | ta 1)
-        complete --command vf --condition (__vf_complete_arg_filter_gen $counterer $file) --argument $file --description (basename $file) --no-files --authoritative
-        set counterer (++ $counterer)
-    end
-end
-
-function numberer_simple
-    if not set --query SEARCH_OPEN_LIMIT
-        set SEARCH_OPEN_LIMIT 20
-    end
-
-    set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
-    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
-
-    set --local counter 1
-
-    while read line
-        if ≤ $counter $SEARCH_OPEN_LIMIT
-            set counter_string (printf '%-'$counter_padded_size'i ' $counter)
-            set counter (++ $counter)
-        else
-            set counter_string "$counter_finished "
-        end
-        echo $counter_string$line
-    end
-end
-
-function numberer
-    if not set --query SEARCH_OPEN_LIMIT
-        set SEARCH_OPEN_LIMIT 20
-    end
-
-    set --local counter_padded_size (amath "length($SEARCH_OPEN_LIMIT)")
-    set --local counter_finished (echo $SEARCH_OPEN_LIMIT | tr '01234567890' ' ')
-
-    set --local blank true
-    set --local counter 1
-
-    while read line
-        if ≤ $counter $SEARCH_OPEN_LIMIT
-            if eval $blank
-                if not test -z $line
-                    set counter_string (printf '%-'$counter_padded_size'i ' $counter)
-                    set counter (++ $counter)
-                    set blank false
-                end
-            else
-                if not test -z $line
-                    set counter_string "$counter_finished "
-                else
-                    set blank true
-                end
-            end
-        else
-            if not test -z $line
-                set counter_string "$counter_finished "
-            else
-                set counter_string ''
-            end
-        end
-        echo $counter_string$line
-    end
-end
-
-function get_lines
-    if == 1 (count $argv)
-        sed --quiet ''$argv[1]'p'
-    else
-        set --local get_lines_file (mktemp --suffix _get_lines_helper)
-
-        while read line
-            echo $line >> $get_lines_file
-        end
-
-        for specifier in $argv
-            cat $get_lines_file | sed --quiet ''$specifier'p'
-        end
-        rm $get_lines_file
-    end
-end
-
-function test_for_has_searched
-    set --query LAST_SEARCH_TERM
-end
-
-function recently_searched_files
-    if not set --query LAST_SEARCHED_FILES
-        echo \n
-    end
-    cat $LAST_SEARCHED_FILES | ta 1 | uniq
-end
-
 function blerg --argument-names the_royal_nergin
     echo blerg $the_royal_nergin ferg snerg
 end
@@ -1044,15 +1006,17 @@ function lsusers \
     cat /etc/passwd
 end
 
-function xcape \
+function xcape_defaults \
   --description "Run xcape keymappings"
-    # For faster tmux use
-    ~/apps/xcape/xcape -e 'Alt_L=Control_L|S'
-    # For vim happiness
-    ~/apps/xcape/xcape -e 'Control_L=Escape'
-    # For fast parens
-    ~/apps/xcape/xcape -e 'Shift_L=Shift_L|9'
-    ~/apps/xcape/xcape -e 'Shift_R=Shift_R|0'
+    # # For faster tmux use
+    # xcape -e 'Alt_L=Control_L|S'
+    # # For vim happiness
+    # xcape -e 'Control_L=Escape'
+    # # For fast parens
+    # xcape -e 'Shift_L=Shift_L|9'
+    # xcape -e 'Shift_R=Shift_R|0'
+
+    xcape -e 'Alt_L=Control_L|S;Control_L=Escape;Shift_L=Shift_L|9;Shift_R=Shift_R|0'
 end
 
 function downpour_mp3_rename
@@ -1085,36 +1049,6 @@ end
 #     | tmux -2 -q -C
 #     tmux -2 attach
 # end
-
-function open_bot_windows
-    set --local teh_bots ~/codes/bots
-    tmux new-window -c $teh_bots/reporting-bot
-    tmux split-window -h -c $teh_bots/queue-bot
-    tmux select-pane -L
-    tmux split-window -v -c $teh_bots/summary-bot
-    tmux select-pane -R
-    tmux split-window -h -c $teh_bots/parse-bot
-    tmux split-window -v -c $teh_bots/retention-bot
-    tmux select-pane -L
-    tmux split-window -v -c $teh_bots/cleanup-bot
-    tmux select-pane -U
-    tmux set-option synchronize-panes on
-end
-
-function all_bots_skiq --argument-names do_git_update
-    open_bot_windows
-    if begin; != 0 (count $argv); and contains -- $do_git_update -g --git-update; end
-        tmux send-keys g p Enter
-        tmux send-keys b u n d l e Enter
-    end
-    tmux send-keys s k i q Enter
-end
-
-function bot_pipeline
-    open_bot_windows
-    tmux send-keys t a i l Space '-' '-' f o l l o w Space l o g '/' '*' '-'  b o t '.' l o g Enter
-    all_bots_skiq $argv
-end
 
 function fancy_foreman \
   --description "foreman with RubyMine Ruby args"
@@ -1154,11 +1088,6 @@ function gmd --argument scope \
     end
 end
 
-function rl \
-  --description "Load up rvm"
-    rvm reload > /dev/null; and cd .
-end
-
 # function rtags \
 #   --description "Generate ctags for a ruby project in a separate tmux session"
 #     set --export TMUX (tmux new-session -s "rtags "(basename (pwd)) -P -d -c "#{pane_current_path}" __rtags)
@@ -1166,10 +1095,6 @@ end
 
 function rtags \
   --description "Generate ctags for a ruby project"
-    if which rvm > /dev/null
-        set gemdir (rvm gemset dir)
-    end
-
     echo 'Generating combined gem ctags...'
     ctags -R --exclude=doc{,s} --exclude=\*.tags . $gemdir
     rdoc --format=tags --ctags-merge --exclude=.log --exclude=doc{,s} --exclude=tags --exclude=.tags .
@@ -1194,11 +1119,6 @@ function rtags \
     return 0
 end
 
-function skiq \
-  --description "Startup sidekiq worker"
-    rerun --background --no-growl --pattern '{**/*.rb}' -- bundle exec sidekiq -r ./main.rb -e development -C ./config/sidekiq.yml --verbose
-end
-
 function swp_all \
   --description "Print out paths to all files with a corresponding .*.swp file"
     f '\.swp' \
@@ -1213,12 +1133,12 @@ function marketplace_renamer
     rename 's/(\d{8})_(tech)/$1_02_$2/' *.mp3
     rename 's/(\d{8})_(pm)/$1_03_$2/' *.mp3
     rename 's/(\d{8})_(weekend)/$1_04_$2/' *.mp3
-    bk
+    prevd
 end
 
-function less
-    command less --RAW-CONTROL-CHARS $argv
-end
+# function less
+#     command less --RAW-CONTROL-CHARS $argv
+# end
 
 function fish_debug \
   --description "Run fish in debug mode and log stuff out to files and such"
@@ -1242,7 +1162,26 @@ function fish_debug \
     fish --interactive --debug 3 --profile $pro_file ^$log_file
 end
 
-complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
+function remove_if_in_commandline
+    set current (commandline --tokenize)
+
+    while read line
+        if not contains $line $current
+            echo -s $line
+        end
+    end
+end
+
+# TODO: Add version switch for fd-find to exclude --strip-cwd-prefix if
+# version is less than 8.0
+complete \
+    --command vim \
+    --condition '[ "$PWD" != "$HOME" ]' \
+    --argument '(fd --strip-cwd-prefix --max-depth 7 ^/dev/null | remove_if_in_commandline)'
+    # --argument '(fd --max-depth 7 ^/dev/null | remove_if_in_commandline)'
+# complete --command vim --condition '[ "$PWD" != "$HOME" ]' --argument '(fd --max-depth 7 \'.*\' ^/dev/null | remove_if_in_commandline)'
+# complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
+
 # complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
 # complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
 
@@ -1250,13 +1189,6 @@ if == (uname) Darwin
     function postgres_start_server
         launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
     end
-end
-
-for project in ~/codes/{prism,portal,api,database-migrations,automation-rlw} ~/codes/bots/* ~/go/src/github.com/distil/*
-    set --local project (echo $project | sed 's#/$##')
-    echo "function "(basename $project)"
-        cd $project
-    end" | source
 end
 
 function __psql_all_db_names
@@ -1278,32 +1210,6 @@ end
 complete --command pcoms --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
 function pcoms --argument-names dbname
     pcom $dbname "copy ($argv[2..-1]) to stdout with (format 'csv', header false, delimiter E'\t')"
-end
-
-complete --command pout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
-# complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
-complete --command pout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
-function pout --argument-names dbname schema_table
-    pcoms $dbname "SELECT * FROM $schema_table"
-end
-
-complete --command pfout --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_summary;   end' --arguments 'summary.(ls_summary_tables)'     --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet distil_reporting; end' --arguments 'reporting.(ls_reporting_tables)' --exclusive --authoritative
-# complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __fish_print_cmd_args | ta 2 | grep --quiet postgres; end'         --arguments 'public.(ls_parse_tables)'        --exclusive --authoritative
-complete --command pfout --condition 'begin; == (count (__fish_print_cmd_args)) 2; and __psql_all_db_names | grep --quiet --line-regexp (echo (__fish_print_cmd_args) | ta 2 | tr --delete " "); end'  --arguments '(ls_psql_schema_tables (echo (__fish_print_cmd_args) | ta 2))' --exclusive --authoritative
-function pfout --argument-names dbname schema_table file_name_tag
-    if test -z $file_name_tag
-        set file_name_tag ""
-    else
-        set file_name_tag "__"$file_name_tag
-    end
-    set branch_name __(git branch --no-color | grep '\*' | ta 2)
-    set time_stamp __(date +'%Y-%m-%d_%I:%M:%S.%2N_%p')
-    set file_name $schema_table$branch_name$file_name_tag$time_stamp
-    pout $dbname $schema_table > $file_name
 end
 
 complete --command ls_psql_schemas --condition '≤ (count (__fish_print_cmd_args)) 1' --arguments '(__psql_all_db_names)' --exclusive --authoritative
@@ -1348,28 +1254,6 @@ function dump_parse_tables --argument-names file_name_tag
     end
 end
 
-function ls_summary_tables
-    pcoms distil_summary "Select table_name from information_schema.tables where table_schema = 'summary' and table_name not like '%_2%'"
-end
-
-function dump_summary_tables --argument-names file_name_tag
-    for table in (ls_summary_tables)
-        echo $table
-        pfout distil_summary "summary.$table" $file_name_tag
-    end
-end
-
-function ls_reporting_tables
-    pcoms distil_reporting "Select table_name from information_schema.tables where table_schema = 'reporting' and table_name not like '%_2%' and table_name not like 'counters'"
-end
-
-function dump_reporting_tables --argument-names file_name_tag
-    for table in (ls_reporting_tables)
-        echo $table
-        pfout distil_reporting "reporting.$table" $file_name_tag
-    end
-end
-
 function sdiff --argument-names f1 f2
     icdiff (sort $f1 | psub) (sort $f2 | psub)
 end
@@ -1386,4 +1270,136 @@ complete --command pbproc --arguments '(functions | tr --delete \,)' --authorita
 function pbproc \
     --description "Process contents of pb clipboard on OS X"
     pbpaste | eval $argv | pbcopy
+end
+
+complete --command aws_env --arguments "(ls ~/.aws/profiles/ | remove_if_in_commandline)" --authoritative --exclusive
+function aws_env
+    for arg in $argv
+        set AWS_VAULT (basename --suffix .gpg $arg)
+        set env_args $env_args AWS_VAULT="$AWS_VAULT"
+        set env_args $env_args AWS_ENV="$AWS_VAULT"
+        if string match --quiet --regex '\.gpg$' "$arg"
+            set env_args $env_args (gpg --decrypt ~/.aws/profiles/"$arg")
+        else
+            set env_args $env_args (cat ~/.aws/profiles/"$arg")
+        end
+    end
+
+    env $env_args fish
+end
+
+function title_case --argument-names word
+    while read word
+        echo -n (string sub --start 1 --length 1 $word | string upper)(string sub --start 2 $word | string lower)\n
+    end
+end
+
+function screaming_snake_to_cap_camel
+    while read input
+        string split '_' $input | title_case | string join ''
+    end
+end
+
+function aws_load_role2 \
+    --argument-names role_file
+
+    for prop in ACCESS_KEY_ID SECRET_ACCESS_KEY SESSION_TOKEN
+        set --export AWS_$prop (\
+            cat $role_file \
+            | jq \
+                .Credentials.(echo $prop | screaming_snake_to_cap_camel) \
+                --raw-output \
+        )
+    end
+
+    set --export AWS_ENV (\
+        cat $role_file \
+        | jq .AssumedRoleUser.Arn --raw-output \
+    )
+
+    fish
+end
+
+function aws_assume_role --argument-names \
+    account_id \
+    role_name \
+    session_name \
+    external_id
+
+    set aws_args \
+    --role-arn arn:aws:iam::$account_id:role/$role_name \
+    --role-session-name $session_name
+
+    if [ -n "$external_id" ]
+        set aws_args --external-id $external_id $aws_args
+    end
+
+    aws_load_role (aws sts assume-role $aws_args | psub)
+end
+
+function aws_load_role \
+    --argument-names role_file
+
+    set jq_template (string join \\n \
+        '"AWS_SESSION_TOKEN=\(.Credentials.SessionToken)' \
+        'AWS_ACCESS_KEY_ID=\(.Credentials.AccessKeyId)' \
+        'AWS_SECRET_ACCESS_KEY=\(.Credentials.SecretAccessKey)' \
+        'AWS_ENV=\(.AssumedRoleUser.Arn)"' \
+    )
+
+    env (cat $role_file | jq --raw-output $jq_template) fish
+end
+
+function aws_docker
+    # --tty \
+    sudo -E docker run \
+    --interactive \
+    --rm \
+    --env=AWS_{ACCESS_KEY_ID,DEFAULT_REGION,SECRET_ACCESS_KEY} \
+    --volume $PWD:/aws \
+    amazon/aws-cli \
+    --no-paginate \
+    --color=off \
+    $argv
+end
+
+# abbr --add pst  "xclip -out -selection clipboard"
+# abbr --add cpy  system_clipboard
+
+function pst
+    if which xclip >/dev/null 2>/dev/null
+        xclip -out -selection clipboard
+    else if which pbpaste >/dev/null 2>/dev/null
+        pbpaste
+    else
+        cat >/dev/null
+    end
+end
+
+function system_clipboard
+    if which xclip >/dev/null 2>/dev/null
+        xclip -in -selection clipboard
+    else if which pbcopy >/dev/null 2>/dev/null
+        pbcopy
+    else
+        cat >/dev/null
+    end
+end
+
+# want a dedicated function rather than an expansion
+function cpy
+    system_clipboard
+end
+
+function clear_system_clipboard
+    echo -ns | system_clipboard
+end
+
+function record --argument-names file_name
+    if [ -z "$file_name" ]
+        set file_name recording
+    end
+
+    asciinema rec --idle-time-limit 0.25 "$file_name.cast" \
+    && cast2gif "$file_name.cast" "$file_name.gif"
 end

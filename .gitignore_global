@@ -1,6 +1,6 @@
 # ctags (and custom rtags)
-/tags
-/local.tags
+tags
+local.tags
 .rdoc
 
 /.autotest
@@ -21,3 +21,18 @@ files.list
 
 # frequent pry hack
 marshal.dump
+
+# Sandbox
+prototype/
+
+# Python virtual-env
+.venv/
+
+# asdf
+.tool-versions
+
+# ripgrep
+.rgignore
+
+# test coverage report
+tarpaulin-report.json
