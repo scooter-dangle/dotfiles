@@ -13,12 +13,18 @@ mkdir --parents ~/.config/fish
 ln --symbolic --force $PWD/config.fish  ~/.config/fish/config.fish
 ln --symbolic --force $PWD/aliases.fish ~/.config/fish/aliases.fish
 
+mkdir --parents ~/.config/bat
+ln --symbolic $PWD/bat.conf ~/.config/bat/config
+
+ln --symbolic $PWD/starship.toml ~/.config/starship.toml
+
 for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
 do
   ln --symbolic --force $PWD/$file  ~/$file
 done
 
-if [ -d /workspaces ]; then
+if [ -d /workspaces ]
+then
   mkdir --parents /workspaces/.local/share/fish
   mkdir --parents ~/.local/share/fish
   touch /workspaces/.local/share/fish/fish_history
@@ -38,9 +44,12 @@ sudo apt install --yes \
   neovim \
   build-essential
 
-export PATH="$HOME/.cargo/bin:$PATH"
+sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
+sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
 
 # Rust
+export PATH="$HOME/.cargo/bin:$PATH"
+
 bash <( \
   curl --proto '=https' \
     --tlsv1.2 \
