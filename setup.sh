@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # apt tool installs
-apt update --yes
-apt install --yes \
+sudo apt update --yes
+sudo apt install --yes \
   curl \
   fish \
   git \
@@ -32,12 +32,12 @@ cargo install \
 # symlinks
 
 mkdir --parents ~/.config/fish
-ln --symbolic ~/dotfiles/fish/config.fish  ~/.config/fish/config.fish
-ln --symbolic ~/dotfiles/fish/aliases.fish ~/.config/fish/aliases.fish
+ln --symbolic --force ~/dotfiles/fish/config.fish  ~/.config/fish/config.fish
+ln --symbolic --force ~/dotfiles/fish/aliases.fish ~/.config/fish/aliases.fish
 
 for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
 do
-  ln --symbolic ~/dotfiles/$file  ~/$file
+  ln --symbolic --force ~/dotfiles/$file  ~/$file
 done
 
 # use fish!
