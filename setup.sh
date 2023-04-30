@@ -25,6 +25,8 @@ bash <( \
     https://sh.rustup.rs \
 ) -y
 
+export PATH="$HOME/.cargo/bin:$PATH"
+
 # Rust tools
 cargo install \
   cargo-expand
