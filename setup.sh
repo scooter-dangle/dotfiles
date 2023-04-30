@@ -37,10 +37,10 @@ cargo install \
 # symlinks
 
 mkdir --parents ~/.config/fish
-ln --symbolic --force ~/dotfiles/fish/config.fish  ~/.config/fish/config.fish
-ln --symbolic --force ~/dotfiles/fish/aliases.fish ~/.config/fish/aliases.fish
+ln --symbolic --force $PWD/config.fish  ~/.config/fish/config.fish
+ln --symbolic --force $PWD/aliases.fish ~/.config/fish/aliases.fish
 
 for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
 do
-  ln --symbolic --force ~/dotfiles/$file  ~/$file
+  ln --symbolic --force $PWD/$file  ~/$file
 done
