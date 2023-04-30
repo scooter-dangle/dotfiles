@@ -43,4 +43,4 @@ do
 done
 
 # use fish!
-chsh --shell $(which fish) codespace
+sudo chsh --shell $(which fish) codespace
