@@ -9,18 +9,22 @@ sudo apt install --yes fish
 sudo chsh --shell $(which fish) codespace
 
 # symlinks
+if [ ! -e ~/dotfiles ]
+then
+  ln --symbolic --directory $PWD ~/dotfiles
+fi
 mkdir --parents ~/.config/fish
-ln --symbolic --force $PWD/config.fish  ~/.config/fish/config.fish
-ln --symbolic --force $PWD/aliases.fish ~/.config/fish/aliases.fish
+ln --symbolic --force ~/dotfiles/config.fish  ~/.config/fish/config.fish
+ln --symbolic --force ~/dotfiles/aliases.fish ~/.config/fish/aliases.fish
 
 mkdir --parents ~/.config/bat
-ln --symbolic $PWD/bat.conf ~/.config/bat/config
+ln --symbolic ~/dotfiles/bat.conf ~/.config/bat/config
 
-ln --symbolic $PWD/starship.toml ~/.config/starship.toml
+ln --symbolic ~/dotfiles/starship.toml ~/.config/starship.toml
 
 for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
 do
-  ln --symbolic --force $PWD/$file  ~/$file
+  ln --symbolic --force ~/dotfiles/$file  ~/$file
 done
 
 if [ -d /workspaces ]
@@ -32,7 +36,7 @@ then
 fi
 
 # moar of the login prompt
-bash <(\
+sh <(\
   curl --silent --show-error https://starship.rs/install.sh \
 ) --yes
 
@@ -55,7 +59,7 @@ sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
 # Rust
 export PATH="$HOME/.cargo/bin:$PATH"
 
-bash <( \
+sh <( \
   curl --proto '=https' \
     --tlsv1.2 \
     --silent \
