@@ -75,10 +75,10 @@ end
 # 		for i in $mycdpath
 # 			# Move to the initial directory first,
 # 			# in case the CDPATH directory is relative
-# 			# builtin cd $wd ^/dev/null
-# 			__fish_skip_config "builtin cd $wd" ^/dev/null
-# 			# builtin cd $i ^/dev/null
-# 			__fish_skip_config "builtin cd $i" ^/dev/null
+# 			# builtin cd $wd 2>/dev/null
+# 			__fish_skip_config "builtin cd $wd" 2>/dev/null
+# 			# builtin cd $i 2>/dev/null
+# 			__fish_skip_config "builtin cd $i" 2>/dev/null
 
 # 			if test $status -ne 0
 # 				# directory does not exists or missing permission
@@ -96,5 +96,5 @@ end
 # 		end
 # 	end
 
-# 	__fish_skip_config "builtin cd $wd" ^/dev/null
+# 	__fish_skip_config "builtin cd $wd" 2>/dev/null
 # end

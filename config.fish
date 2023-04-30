@@ -5,8 +5,6 @@ if status is-interactive
   end
   source ~/dotfiles/__fish_complete_cd.fish
   source ~/dotfiles/z.fish
-  # Erases my history 🙁
-  # source ~/dotfiles/mcfly.fish
   complete --command blarp --no-files --arguments '(__fish_complete_j)'
 end
 
@@ -543,13 +541,47 @@ set --export RUST_SRC_PATH ~/stuffs/rust/src
 # set --export RUSTFLAGS '-C link-args=-fuse-ld=lld'
 set --export PACT_OUTPUT_DIR pact-tests
 
-if which sccache-wrapper.sh >/dev/null 2>/dev/null
-  set --export RUSTC_WRAPPER sccache-wrapper.sh
-  # set --export RUSTC_WORKSPACE_WRAPPER sccache-wrapper.sh
-end
+# Shouldn't be necessary after Rust 1.70 lands
+set --export CARGO_REGISTRIES_CRATES_IO_PROTOCOL sparse
+
+# not working eigh tea em
+# if which sccache-wrapper.sh >/dev/null 2>/dev/null
+#   set --export RUSTC_WRAPPER sccache-wrapper.sh
+#   # set --export RUSTC_WORKSPACE_WRAPPER sccache-wrapper.sh
+# end
 
 if [ -e ~/.aws/profiles/sccache ]
   export (cat ~/.aws/profiles/sccache)
+end
+
+if [ (uname) = 'Darwin' ]
+  # Per caveats section after running
+  # `brew install llvm cmake`
+  #
+  # llvm is keg-only, which means it was not symlinked into /opt/homebrew,
+  # because macOS already provides this software and installing another version in
+  # parallel can cause all kinds of trouble.
+  set --global --export LDFLAGS "-L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++" $LDFLAGS
+  # Not sure if it's correct to do the following line after the one above
+  # For compilers to find llvm you may need to set:
+  set --global --export LDFLAGS "-L/opt/homebrew/opt/llvm/lib" $LDFLAGS
+  set --global --export CPPFLAGS "-I/opt/homebrew/opt/llvm/include" $CPPFLAGS
+  # If you need to have llvm first in your PATH, run:
+  #   fish_add_path /opt/homebrew/opt/llvm/bin
+  #
+  # Per brew
+  set --global --export LDFLAGS "-L/opt/homebrew/opt/openblas/lib" $LDFLAGS
+  set --global --export CPPFLAGS "-I/opt/homebrew/opt/openblas/include" $CPPFLAGS
+  # For pkg-config to find openblas you may need to set:
+  set --global --export PKG_CONFIG_PATH "/opt/homebrew/opt/openblas/lib/pkgconfig" $PKG_CONFIG_PATH
+
+  # Per brew
+  set --global --export LDFLAGS "-L/opt/homebrew/opt/libpq/lib" $LDFLAGS
+  set --global --export CPPFLAGS "-I/opt/homebrew/opt/libpq/include" $CPPFLAGS
+  set --global --export PKG_CONFIG_PATH "/opt/homebrew/opt/libpq/lib/pkgconfig" $PKG_CONFIG_PATH
+  set --global --export CPPFLAGS "-I/opt/homebrew/opt/openjdk/include" $CPPFLAGS
+
+  fish_add_path /opt/homebrew/opt/openjdk/bin
 end
 
 starship init fish | source

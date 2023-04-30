@@ -161,7 +161,7 @@ function z --description "Jump to a recent directory"
                     for( i in rank ) print i "|" 0.9*rank[i] "|" time[i] # aging
                 } else for( i in rank ) print i "|" rank[i] "|" time[i]
             }
-        ' $datafile ^/dev/null > $tempfile
+        ' $datafile 2>/dev/null > $tempfile
 
         mv -f $tempfile $datafile
 

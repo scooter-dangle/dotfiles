@@ -15,6 +15,35 @@ function ga \
     functions $argv | pygmentize -l bash
 end
 
+# easy fix
+function uname \
+  --description "The full documentation for Linux is maintained as a Wikipedia article. If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article."
+    command uname $argv \
+    | sed 's/GNU\/Linux/Linux/g'
+end
+
+# the short-opt annoyingly varies by OS
+switch (uname)
+case "Darwin"
+    set sed_regex_flag "-E"
+case "Linux"
+    set sed_regex_flag "-r"
+end
+
+function set_hasher
+    if not set --query --universal HASHER
+        if which md5 >/dev/null 2>/dev/null
+            set --universal HASHER md5
+        else if which md5sum >/dev/null 2>/dev/null
+            set --universal HASHER md5sum
+        else
+            echo "no hasher found (md5 or md5sum)" >&2
+            return 1
+        end
+    end
+end
+
+
 function amath \
   --description "'Advanced' math (bc with math library option)"
     echo $argv | bc --mathlib
@@ -31,8 +60,9 @@ function trash \
     end
 end
 
-function __trash --argument-names item __trash_base_dir \
-  --description "Worker function behind trash function...use trash instead."
+function __trash \
+  --description "Worker function behind trash function...use trash instead." \
+  --argument-names item __trash_base_dir
     # $__trash_base_dir must either be nil or an immediate subdirectory
     # of $TRASH where the final directory name is a number
     set TRASH ~/Trash
@@ -59,11 +89,10 @@ function __trash --argument-names item __trash_base_dir \
     if test -e $trash_item
         # echo "TRUE: test -e $trash_item" >&2
 
-        if begin
-                test -f $trash_item
-                and test -f $item
-                and == (cat $item | md5sum) (cat $trash_item | md5sum)
-            end
+        set_hasher
+
+        if [ -f $trash_item ] && [ -f $item ] && [ (cat $item | $HASHER) = (cat $trash_item | $HASHER) ]
+            # end
             # echo "TRUE: begin" >&2
 
             # Current target already exists and is same as file
@@ -342,7 +371,7 @@ end
 function __grep_highlight --argument-names target
     # helper
     while read line
-        if test (echo $line | grep -l $target ^ /dev/null)
+        if test (echo $line | grep -l $target 2> /dev/null)
             echo $line \
             | grep $target
         else
@@ -419,6 +448,7 @@ abbr --add fw nextd
 abbr --add up 'cd ..'
 abbr --add hm 'cd ~'
 # abbr --add enw 'env (cat ../configs/test.env | tr --squeeze-repeats \n)'
+abbr --add enf 'enw --file'
 
 abbr --add xx 'env (cat .env) rbenv exec bundle exec'
 
@@ -448,17 +478,31 @@ end
 abbr --add gst "git stash"
 abbr --add gsp "git stash pop"
 abbr --add git-current-branch "git rev-parse --abbrev-ref HEAD"
-abbr --add gcb "git rev-parse --abbrev-ref HEAD | tr --delete \n"
-abbr --add gcur "git rev-parse --abbrev-ref HEAD | tr --delete \n"
+if [ (uname) = "Darwin" ]
+    abbr --add gcb "git rev-parse --abbrev-ref HEAD | tr -d \n"
+    abbr --add gcur "git rev-parse --abbrev-ref HEAD | tr -d \n"
+else
+    abbr --add gcb "git rev-parse --abbrev-ref HEAD | tr --delete \n"
+    abbr --add gcur "git rev-parse --abbrev-ref HEAD | tr --delete \n"
+end
 abbr --add gbc "git merge-base HEAD"
 abbr --add glg "git log --graph --oneline --all --decorate --color"
 # abbr --add glw "watch --color --differences --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
-abbr --add glw "watch --color --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
+if [ (uname) = "Darwin" ]
+    abbr --add glw "watch --color --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head -n \$LINES | sed -E \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
+else
+    abbr --add glw "watch --color --no-title --interval=0.1 'git log --graph --oneline --all --decorate --color | head --lines \$LINES | sed --regexp-extended \"s/(^((\x1B\[[0-9;]*m)*[^\x1B]){0,\$COLUMNS}).*\$/\1\x1B[m/\"'"
+end
 abbr --add gla "git log --graph --all --decorate --color"
 abbr --add gsmod "git ls-files --modified"
 abbr --add gsdel "git ls-files --deleted"
 abbr --add gsnew "git status --short | sed --silent 's/^?? //p'"
-abbr --add gsconfl "git status --short | sed --silent --regexp-extended 's/^(UA|UU|AU|AA) //p'"
+switch (uname)
+case "Darwin"
+    abbr --add gsconfl "git status --short | sed -n       -E                's/^(UA|UU|AU|AA) //p'"
+case "Linux"
+    abbr --add gsconfl "git status --short | sed --silent --regexp-extended 's/^(UA|UU|AU|AA) //p'"
+end
 abbr --add grpo "git remote prune origin"
 abbr --add gmb  "git merge-base HEAD master"
 abbr --add gother "git ls-files --others --exclude-standard --directory --no-empty-directory --error-unmatch -- '*'"
@@ -519,7 +563,8 @@ function __s_tag_files
     echo -ns $tag_files\n
 end
 
-function __s_complete_gen
+function __s_complete_gen \
+    --inherit-variable sed_regex_flag
     set pwd_length (echo -ns "$PWD" | wc -c)
     set follow_on_dir_start (math "$pwd_length + 2")
 
@@ -531,12 +576,23 @@ function __s_complete_gen
 
     # print non meta lines that are for files in the current directory (either
     # include PWD as substring in path or are local relative paths)
+    # This one prints the filepath as the description
+    # sed '/^!_TAG/d' $tag_files \
+    # | awk -F \t 'substr($2, 0, '$pwd_length') == "'$PWD'" || $2 ~ /^[^\/]/ { print $1 "\t" substr($2, '$follow_on_dir_start') }'
+    # This one prints the code snippet as the description
+    # sed '/^!_TAG/d' $tag_files \
+    # | awk -F \t 'substr($2, 0, '$pwd_length') == "'$PWD'" || $2 ~ /^[^\/]/ { print $1 "\t" $3 }' \
+    # | sed $sed_regex_flag 's#\t/\^ *#\t#' \
+    # | sed $sed_regex_flag 's# *\$/;?"?$##'
+    # This one prints the file AND code snippet as the description
     sed '/^!_TAG/d' $tag_files \
-    | awk -F \t 'substr($2, 0, '$pwd_length') == "'$PWD'" || $2 ~ /^[^/]/ { print $1 "\t" substr($2, '$follow_on_dir_start') }'
+    | awk -F \t 'substr($2, 0, '$pwd_length') == "'$PWD'" || $2 ~ /^[^\/]/ { print $1 "\t" substr($2, '$follow_on_dir_start') "\t" $3 }' \
+    | sed $sed_regex_flag 's#\t/\^ *#\t\# #g' \
+    | sed $sed_regex_flag 's# *\$/;?"?$##'
 
     # cat tags \
-    # | grep -F $PWD ^/dev/null \
-    # | cut -f 1 ^/dev/null \
+    # | grep -F $PWD 2>/dev/null \
+    # | cut -f 1 2>/dev/null \
     # | grep -v '!_TAG' \
     # | uniq
 end
@@ -553,17 +609,27 @@ function __s_cleanup --argument-names dir_hash suffix
     rm -f (ls /tmp/ | grep $dir_hash | grep tag_search_completion)
 end
 
+switch (uname)
+case "Darwin"
+    set stat_fmt_flag "-f" "%z"
+case "Linux"
+    set stat_fmt_flag "-c" "%c"
+end
+
 function __s_complete
     set tag_files (__s_tag_files)
 
+    set_hasher
+
     # set dir_hash (readlink --canonicalize local.tags | md5sum | cut --fields 1 --delimiter ' ')
     # set dir_hash (readlink -f $tag_files | md5sum | cut -f 1 -d ' ')
-    set dir_hash (echo -ns "$PWD" | md5sum | cut -f 1 -d ' ')
+    set dir_hash (echo -ns "$PWD" | $HASHER | cut -f 1 -d ' ')
 
     # set stat_hash (stat --format '%z' local.tags | md5sum | cut --fields 1 --delimiter ' ')
     # TODO: Not sure how to use `stat` in a Gnu vs BSD neutral way
     # set stat_hash (stat --format '%z' local.tags | md5sum | cut -f 1 -d ' ')
-    set stat_hash (stat -c '%z' $tag_files | md5sum | cut -f 1 -d ' ')
+    # set stat_hash (stat -c '%z' $tag_files | md5sum | cut -f 1 -d ' ')
+    set stat_hash (stat $stat_fmt_flag $tag_files | $HASHER | cut -f 1 -d ' ')
     set suffix tag_search_completion
     set filename "/tmp/$dir_hash.$stat_hash.$suffix"
 
@@ -598,7 +664,7 @@ function l \
 end
 
 # complete --command f --arguments  "(ag -g '.*'  | tr '/.' \"\n\" | sort --unique)" --exclusive --authoritative
-complete --command f --arguments  "(fd --strip-cwd-prefix --max-depth 7 '.*' ^/dev/null | tr '/.' \"\n\" | sort -u)" --exclusive --authoritative
+complete --command f --arguments  "(fd --strip-cwd-prefix --max-depth 7 '.*' 2>/dev/null | tr '/.' \"\n\" | sort -u)" --exclusive --authoritative
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
     search_remember f $argv
@@ -607,6 +673,12 @@ end
 # TODO—Use different behavior if `isatty 1` returns true...can pipe things
 # straight through if we're not printing to the shell
 function search_remember
+    if [ (uname) = "Darwin" ]
+        set tee_append "-a"
+    else
+        set tee_append "--append"
+    end
+
     echo "search_remember argv: $argv"  >> /tmp/search.log
     if not set --query SEARCH_OPEN_LIMIT
         set SEARCH_OPEN_LIMIT 80
@@ -642,8 +714,9 @@ function search_remember
             --before-context 1 \
             --after-context 1 \
             --smart-case \
+            --iglob=!(__s_tag_files) \
             $argv[2..-1] \
-        | tee --append /tmp/search.log \
+        | tee $tee_append /tmp/search.log \
         | numberer \
         $more_opts
         # | command $more_opts
@@ -661,9 +734,13 @@ function search_remember
 end
 
 function __search_remember_completer_s \
-  --no-scope-shadowing
-    rg --smart-case --max-count 1 --line-number $argv \
-    | sed -r 's/^([^:]+):([0-9]+) ?(.*)$/\1 +\2 #\3/' \
+  --no-scope-shadowing \
+  --inherit-variable sed_regex_flag
+    rg \
+        --smart-case --max-count 1 \
+        --line-number $argv \
+        --iglob=!(__s_tag_files) \
+    | sed $sed_regex_flag 's/^([^:]+):([0-9]+):? *(.*)$/\1 +\2 \3/' \
     | head -n $SEARCH_OPEN_LIMIT \
     > $tmpfile
     __search_remember_close_out &
@@ -990,13 +1067,6 @@ function evacuate_podders \
     cd $current_dir
 end
 
-# easy fix
-function uname \
-  --description "The full documentation for Linux is maintained as a Wikipedia article. If the google-chrome program is properly installed at your site, the command 'google-chrome http://en.wikipedia.org/wiki/Linux' should give you access to the complete article."
-    command uname $argv \
-    | sed 's/GNU\/Linux/Linux/g'
-end
-
 function blerg --argument-names the_royal_nergin
     echo blerg $the_royal_nergin ferg snerg
 end
@@ -1016,7 +1086,9 @@ function xcape_defaults \
     # xcape -e 'Shift_L=Shift_L|9'
     # xcape -e 'Shift_R=Shift_R|0'
 
-    xcape -e 'Alt_L=Control_L|S;Control_L=Escape;Shift_L=Shift_L|9;Shift_R=Shift_R|0'
+    pkill xcape
+
+    xcape -e 'Alt_L=Control_R|S;Control_L=Escape;Shift_L=Shift_L|9;Shift_R=Shift_R|0'
 end
 
 function downpour_mp3_rename
@@ -1159,7 +1231,7 @@ function fish_debug \
     touch $log_file
     touch $pro_file
 
-    fish --interactive --debug 3 --profile $pro_file ^$log_file
+    fish --interactive --debug 3 --profile $pro_file 2>$log_file
 end
 
 function remove_if_in_commandline
@@ -1177,13 +1249,13 @@ end
 complete \
     --command vim \
     --condition '[ "$PWD" != "$HOME" ]' \
-    --argument '(fd --strip-cwd-prefix --max-depth 7 ^/dev/null | remove_if_in_commandline)'
-    # --argument '(fd --max-depth 7 ^/dev/null | remove_if_in_commandline)'
-# complete --command vim --condition '[ "$PWD" != "$HOME" ]' --argument '(fd --max-depth 7 \'.*\' ^/dev/null | remove_if_in_commandline)'
-# complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' ^/dev/null)'
+    --argument '(fd --strip-cwd-prefix --max-depth 7 2>/dev/null | remove_if_in_commandline)'
+    # --argument '(fd --max-depth 7 2>/dev/null | remove_if_in_commandline)'
+# complete --command vim --condition '[ "$PWD" != "$HOME" ]' --argument '(fd --max-depth 7 \'.*\' 2>/dev/null | remove_if_in_commandline)'
+# complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' 2>/dev/null)'
 
 # complete --command vim --condition 'test -e .gitignore' --authoritative --argument '(ag --depth 8 --max-count 40 -g \'.*\')'
-# complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" ^/dev/null)'
+# complete --command vim --condition 'true' --authoritative --argument '(ag --depth 8 --max-count 40 -g ""(__fish_print_cmd_args | ta (count __fish_print_cmd_args))"" 2>/dev/null)'
 
 if == (uname) Darwin
     function postgres_start_server
@@ -1274,8 +1346,14 @@ end
 
 complete --command aws_env --arguments "(ls ~/.aws/profiles/ | remove_if_in_commandline)" --authoritative --exclusive
 function aws_env
+    if [ (uname) = "Darwin" ]
+        set suffix_arg "-s"
+    else
+        set suffix_arg "--suffix"
+    end
+
     for arg in $argv
-        set AWS_VAULT (basename --suffix .gpg $arg)
+        set AWS_VAULT (basename $suffix_arg .gpg $arg)
         set env_args $env_args AWS_VAULT="$AWS_VAULT"
         set env_args $env_args AWS_ENV="$AWS_VAULT"
         if string match --quiet --regex '\.gpg$' "$arg"

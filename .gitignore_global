@@ -36,3 +36,9 @@ prototype/
 
 # test coverage report
 tarpaulin-report.json
+
+# Stott's query file shortcuts
+last_query.sql
+last_result.csv
+query__2*T*.sql
+result__2*T*.csv
