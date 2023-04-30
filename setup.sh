@@ -7,7 +7,7 @@ apt install --yes \
   fish \
   git \
   ripgrep \
-  fd-find
+  fd-find \
   bat \
   tmux \
   jq \
