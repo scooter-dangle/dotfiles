@@ -32,7 +32,9 @@ then
 fi
 
 # moar of the login prompt
-curl --silent --show-error https://starship.rs/install.sh | sh
+bash <(\
+  curl --silent --show-error https://starship.rs/install.sh \
+) --yes
 
 # the rest of the tools
 sudo apt install --yes \
