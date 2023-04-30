@@ -15,6 +15,11 @@ sudo apt install --yes \
   neovim \
   build-essential
 
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# use fish!
+sudo chsh --shell $(which fish) codespace
+
 # Rust
 bash <( \
   curl --proto '=https' \
@@ -24,8 +29,6 @@ bash <( \
     --fail \
     https://sh.rustup.rs \
 ) -y
-
-export PATH="$HOME/.cargo/bin:$PATH"
 
 # Rust tools
 cargo install \
@@ -41,6 +44,3 @@ for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
 do
   ln --symbolic --force ~/dotfiles/$file  ~/$file
 done
-
-# use fish!
-sudo chsh --shell $(which fish) codespace
