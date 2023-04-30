@@ -31,6 +31,9 @@ then
   ln --symbolic --force /workspaces/.local/share/fish/fish_history ~/.local/share/fish/fish_history
 fi
 
+# moar of the login prompt
+curl --silent --show-error https://starship.rs/install.sh | sh
+
 # the rest of the tools
 sudo apt install --yes \
   curl \
