@@ -663,8 +663,21 @@ function l \
     sed $range_start,$range_stop'p;'$range_stop'q' --silent
 end
 
+# version is less than 8.0
+if which fd 2>/dev/null >/dev/null
+    # stupid shortopts due to want this to work on macOS
+    set fd_major_version (fd --version | cut -d ' ' -f 2 | cut -d . -f 1)
+    if [ "$fd_major_version" -ge 8 ]
+        set --export --universal fd_strip_cwd_prefix --strip-cwd-prefix
+    else
+        set --export --universal fd_strip_cwd_prefix ""
+    end
+else
+    set --export --universal fd_strip_cwd_prefix ""
+end
+
 # complete --command f --arguments  "(ag -g '.*'  | tr '/.' \"\n\" | sort --unique)" --exclusive --authoritative
-complete --command f --arguments  "(fd --strip-cwd-prefix --max-depth 7 '.*' 2>/dev/null | tr '/.' \"\n\" | sort -u)" --exclusive --authoritative
+complete --command f --arguments  "(fd $fd_strip_cwd_prefix --max-depth 7 '.*' 2>/dev/null | tr '/.' \"\n\" | sort -u)" --exclusive --authoritative
 function f \
   --description "Find files with the given argument in their name in the current directory or its subdirectories"
     search_remember f $argv
@@ -723,7 +736,7 @@ function search_remember
         __search_remember_completer_s $argv[2..-1] &
     else if [ "$mode" = f ]
         fd \
-            --strip-cwd-prefix \
+            $fd_strip_cwd_prefix \
             --color always \
             $argv[2..-1] \
         | numberer_simple \
@@ -748,7 +761,7 @@ end
 
 function __search_remember_completer_f \
   --no-scope-shadowing
-    fd --strip-cwd-prefix $argv \
+    fd $fd_strip_cwd_prefix $argv \
     | head -n $SEARCH_OPEN_LIMIT \
     > $tmpfile
     __search_remember_close_out &
@@ -1249,7 +1262,7 @@ end
 complete \
     --command vim \
     --condition '[ "$PWD" != "$HOME" ]' \
-    --argument '(fd --strip-cwd-prefix --max-depth 7 2>/dev/null | remove_if_in_commandline)'
+    --argument '(fd '$fd_strip_cwd_prefix' --max-depth 7 2>/dev/null | remove_if_in_commandline)'
     # --argument '(fd --max-depth 7 2>/dev/null | remove_if_in_commandline)'
 # complete --command vim --condition '[ "$PWD" != "$HOME" ]' --argument '(fd --max-depth 7 \'.*\' 2>/dev/null | remove_if_in_commandline)'
 # complete --command vim --authoritative --argument '(ag --depth 7 --max-count 250 -g \'.*\' 2>/dev/null)'
