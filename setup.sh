@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # apt tool installs
+sudo apt-add-repository ppa:fish-shell/release-3
 sudo apt update --yes
 # start with fish so it's available faster when we ssh in
 sudo apt install --yes fish
