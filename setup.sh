@@ -20,6 +20,9 @@ ln --symbolic --force ~/dotfiles/aliases.fish ~/.config/fish/aliases.fish
 mkdir --parents ~/.config/bat
 ln --symbolic ~/dotfiles/bat.conf ~/.config/bat/config
 
+mkdir --parents ~/.config/htop
+ln --symbolic ~/dotfiles/htoprc ~/.config/htop/htoprc
+
 ln --symbolic ~/dotfiles/starship.toml ~/.config/starship.toml
 
 for file in .bash* .gitconfig .tmux.conf .gitignore_global .tmux.conf
@@ -67,6 +70,8 @@ sh <( \
     --fail \
     https://sh.rustup.rs \
 ) -y
+
+rustup default stable
 
 # Rust tools
 cargo install \
