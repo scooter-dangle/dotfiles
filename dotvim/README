@@ -1,0 +1,18 @@
+Installation:
+	
+	git clone git://github.com/scooter_dangle/dotvim.git
+
+Create symlinks:
+	
+	ln -s ~/.vim/vimrc ~/.vimrc
+	ln -s ~/.vim/gvimrc ~/.gvimrc
+
+Switch to the `~/.vim` directory, and fetch submodules:
+	
+	cd ~/.vim
+        Install the vundle plugin manager.
+                git clone https://github.com/gmarik/vundle.git ~/.vim/bundle/vundle
+	In Vim, run
+		:BundleInstall
+	to install the rest of the plugins listed
+	in the vimrc file.

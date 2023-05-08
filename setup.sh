@@ -84,9 +84,8 @@ cargo install \
 
 wait
 
-gh repo clone scooter-dangle/dotvim
-
-ln --symbolic --force ~/dotfiles/dotvim ~/.vim
+ln --symbolic --directory ~/dotfiles/dotvim ~/.vim
+ln --symbolic --directory ~/dotfiles/nvim ~/.local/share/nvim
 for name in vi vim editor
 do
   sudo update-alternatives --set $name $(which nvim)

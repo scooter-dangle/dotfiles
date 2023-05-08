@@ -1,0 +1,1 @@
+highlight link Crates WarningMsg
