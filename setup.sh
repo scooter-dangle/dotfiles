@@ -42,11 +42,14 @@ fi
 # moar of the login prompt
 sh <(\
   curl --silent --show-error https://starship.rs/install.sh \
-) --yes
+) --yes &
 
+
+sudo apt install --yes build-essential
+
+(
 # the rest of the tools
 sudo apt install --yes \
-  curl \
   git \
   ripgrep \
   fd-find \
@@ -54,11 +57,11 @@ sudo apt install --yes \
   tmux \
   jq \
   icdiff \
-  neovim \
-  build-essential
+  neovim
 
 sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
 sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
+) &
 
 # Rust
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -73,7 +76,10 @@ sh <( \
 ) -y
 
 rustup default stable
+rustup install $(rustc --version | cut --delimiter ' ' --fields 2) &
 
 # Rust tools
 cargo install \
-  cargo-expand
+  cargo-expand &
+
+wait
