@@ -56,7 +56,8 @@ sudo apt install --yes \
   bat \
   tmux \
   jq \
-  icdiff
+  icdiff \
+  ctags
 
 sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
 sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
@@ -87,15 +88,17 @@ sh <( \
 rustup default stable
 rustup install $(rustc --version | cut --delimiter ' ' --fields 2) &
 
-# Rust tools
-cargo install \
-  cargo-expand &
-
 wait
 
+# Rust tools
+cargo install --locked \
+  cargo-expand \
+  rusty-tags \
+  &
+
 ln --symbolic --directory ~/dotfiles/dotvim ~/.vim
-ln --symbolic --directory ~/dotfiles/nvim ~/.local/share/nvim
-ln --symbolic ~/dotfiles/dotvim/init.vim ~/.local/share/nvim/init.vim
+ln --symbolic --directory ~/dotfiles/dotvim ~/.config/nvim
+mkdir --parents ~/.local/share/nvim
 for name in vi vim editor
 do
   # This is not the right way to do this. Should be something like
@@ -105,4 +108,6 @@ do
   sudo ln --force --symbolic $(which nvim) $(which $name)
 done
 
-vim +PlugInstall +qall
+vim +PlugInstall +qall &
+
+wait
