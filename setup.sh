@@ -82,8 +82,14 @@ rustup install $(rustc --version | cut --delimiter ' ' --fields 2) &
 cargo install \
   cargo-expand &
 
-gh repo clone scooter-dangle/dotvim &
-
 wait
 
+gh repo clone scooter-dangle/dotvim
+
 ln --symbolic --force ~/dotfiles/dotvim ~/.vim
+for name in vi vim editor
+do
+  sudo update-alternatives --set $name $(which nvim)
+done
+
+vim +PlugInstall +qall
