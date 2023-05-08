@@ -56,11 +56,20 @@ sudo apt install --yes \
   bat \
   tmux \
   jq \
-  icdiff \
-  neovim
+  icdiff
 
 sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
 sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
+) &
+
+(
+curl --fail --location \
+--output $PWD/nvim-linux64.tar.gz \
+https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz \
+&& tar --extract --gunzip --file $PWD/nvim-linux64.tar.gz \
+&& sudo cp --symbolic-link --recursive $PWD/nvim-linux64/bin/* /usr/local/bin/ \
+&& sudo cp --symbolic-link --recursive $PWD/nvim-linux64/share/* /usr/local/share/ \
+&& sudo cp --symbolic-link --recursive $PWD/nvim-linux64/lib/* /usr/local/lib/
 ) &
 
 # Rust
@@ -86,9 +95,14 @@ wait
 
 ln --symbolic --directory ~/dotfiles/dotvim ~/.vim
 ln --symbolic --directory ~/dotfiles/nvim ~/.local/share/nvim
+ln --symbolic ~/dotfiles/dotvim/init.vim ~/.local/share/nvim/init.vim
 for name in vi vim editor
 do
-  sudo update-alternatives --set $name $(which nvim)
+  # This is not the right way to do this. Should be something like
+  #     sudo update-alternatives --set $name $(which nvim)
+  # But I don't want to figure out the update-alternatives install
+  # option at the moment.
+  sudo ln --force --symbolic $(which nvim) $(which $name)
 done
 
 vim +PlugInstall +qall
