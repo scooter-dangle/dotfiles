@@ -90,9 +90,12 @@ rustup install $(rustc --version | cut --delimiter ' ' --fields 2) &
 
 wait
 
+rustup component add rust-analyzer &
+
 # Rust tools
 cargo install --locked \
   cargo-expand \
+  cargo-clone \
   rusty-tags \
   &
 

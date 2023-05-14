@@ -8,6 +8,10 @@ if status is-interactive
   complete --command blarp --no-files --arguments '(__fish_complete_j)'
 end
 
+if [ "$TERM" = "alacritty" ]
+  set --export --global TERM xterm-256color
+end
+
 if test -e ~/dotfiles/git-custom-commands
   set --export PATH ~/dotfiles/git-custom-commands $PATH
 end
