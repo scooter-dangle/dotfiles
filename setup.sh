@@ -96,6 +96,7 @@ rustup component add rust-analyzer &
 cargo install --locked \
   cargo-expand \
   cargo-clone \
+  tree-sitter-cli \
   rusty-tags \
   &
 

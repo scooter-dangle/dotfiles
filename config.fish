@@ -12,6 +12,10 @@ if [ "$TERM" = "alacritty" ]
   set --export --global TERM xterm-256color
 end
 
+if [ -z "$ALACRITTY_COLOR_SCHEME" ]
+  set --export --global ALACRITTY_COLOR_SCHEME light
+end
+
 if test -e ~/dotfiles/git-custom-commands
   set --export PATH ~/dotfiles/git-custom-commands $PATH
 end
