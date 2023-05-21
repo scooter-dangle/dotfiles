@@ -303,7 +303,11 @@ Plug 'vim-scripts/matchit.zip', {'commit': 'ced6c409c9beeb0b4142d21906606bd19441
 Plug 'vim-scripts/burnttoast256', {'commit': 'ffaaa13e8040a98fae398583205f1760d74c4e11'}
 Plug 'vim-scripts/desert-warm-256', {'commit': 'aeb48b473715b708fc62690cbfe96022ca50a115'}
 Plug 'vim-scripts/twilight256.vim', {'commit': '7080ae87fe1c4286e65d3de98c36bc4e2762c00c'}
-Plug 'chriskempson/base16-vim', {'commit': '3be3cd82cd31acfcab9a41bad853d9c68d30478d'}
+
+" Plug 'chriskempson/base16-vim', {'commit': '3be3cd82cd31acfcab9a41bad853d9c68d30478d'}
+" tweak of the above to avoid running the script twice "
+Plug 'scooter-dangle/base16-vim', {'branch': 'dont-run-color-script-second-time'}
+
 Plug 'chriskempson/vim-tomorrow-theme', {'commit': '46994f3a4d4574ce0d48c26a3bc1e528b8092c93'}
 Plug 'vim-scripts/devbox-dark-256', {'commit': '1064873969b3b5e1a18f33e03a9663f87e1990f2'}
 Plug 'vim-scripts/256-grayvim', {'commit': 'dd978fdbe8de45fb6264dcae1ed74d63273a152e'}
