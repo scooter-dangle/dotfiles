@@ -51,16 +51,13 @@ sudo apt install --yes build-essential
 # the rest of the tools
 sudo apt install --yes \
   git \
-  ripgrep \
-  fd-find \
-  bat \
   tmux \
   jq \
   icdiff \
   ctags
 
-sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
-sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
+# sudo ln --symbolic --force $(which fdfind) /usr/local/bin/fd
+# sudo ln --symbolic --force $(which batcat) /usr/local/bin/bat
 ) &
 
 (
@@ -94,11 +91,24 @@ rustup component add rust-analyzer &
 
 # Rust tools
 cargo install --locked \
+  cargo-binstall &
+
+wait
+
+for tool in \
   cargo-expand \
   cargo-clone \
   tree-sitter-cli \
   rusty-tags \
-  &
+  ripgrep \
+  fd-find \
+  bat \
+  cargo-whatfeatures \
+  cargo-audit \
+  cargo-show-asm
+do
+  cargo binstall --no-confirm --locked $tool &
+done
 
 ln --symbolic --directory ~/dotfiles/dotvim ~/.vim
 ln --symbolic --directory ~/dotfiles/dotvim ~/.config/nvim
